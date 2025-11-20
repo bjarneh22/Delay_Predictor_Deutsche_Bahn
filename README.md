@@ -152,15 +152,18 @@ This can also help you and the tutors to make sure the development does not go o
 Group information:
 - Group name: TBA 
 - Group code: 
-- Group repository: /bjarneh22/Python-for-DS-
+- Group repository: https://github.com/bjarneh22/Python-for-DS-
 - Tutor responsible: Tutor 
 - Group team leader: Member 1 ([redacted])
 - Group members: Member 1, Member 2, Member 3
 
 
 Contribution of each group member:
+
 **Member 1**: TEXT
+
 **Member 2**: TEXT
+
 **Member 3**: TEXT
 
 ----
