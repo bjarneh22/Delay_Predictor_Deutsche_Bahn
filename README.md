@@ -149,22 +149,19 @@ This can also help you and the tutors to make sure the development does not go o
 ----
 ## Group Details
 
-Here, you should provide a group name you want to be referred to as, as well as the names (and optionally contact info) of all group members.
-Additionally, define a group leader, i.e. one person in your group that is the primary contact if tutors want to communicate with your group.
-Also mention here which tutor is assigned to your project.
-
-Example:
-- Group name: 
+Group information:
+- Group name: TBA 
 - Group code: 
-- Group repository: 
-- Tutor responsible:  
-- Group team leader: 
-- Group members:
+- Group repository: /bjarneh22/Python-for-DS-
+- Tutor responsible: Constantin Dallinghaus 
+- Group team leader: Jakob Erhard (jakob.erhard01@stud.uni-goettingen.de)
+- Group members: Jakob Erhard, Bjarne Herbst, Eduard Unruh
 
-Include also the (detailed) contribution of each group member to the development of the project.
 
-Example:
-**Member A**: Developed the data structure of the project. Helped _Member B_ on the web interface and user management. Refactoring on components X, Y, and Z. Responsible for the unit tests in P and T.
+Contribution of each group member:
+**Jakob Erhard**: TEXT
+**Bjarne Herbst**: TEXT
+**Eduard Unruh**: TEXT
 
 ----
 ## Acknowlegdments
