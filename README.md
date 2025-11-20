@@ -152,15 +152,18 @@ This can also help you and the tutors to make sure the development does not go o
 Group information:
 - Group name: TBA 
 - Group code: 
-- Group repository: /bjarneh22/Python-for-DS-
+- Group repository: https://github.com/bjarneh22/Python-for-DS-
 - Tutor responsible: Constantin Dallinghaus 
 - Group team leader: Jakob Erhard (jakob.erhard01@stud.uni-goettingen.de)
 - Group members: Jakob Erhard, Bjarne Herbst, Eduard Unruh
 
 
 Contribution of each group member:
+
 **Jakob Erhard**: TEXT
+
 **Bjarne Herbst**: TEXT
+
 **Eduard Unruh**: TEXT
 
 ----
