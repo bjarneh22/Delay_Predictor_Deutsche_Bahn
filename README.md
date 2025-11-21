@@ -105,7 +105,16 @@ This should inform anyone who looks at your project repository on how they can i
 
 Give some outline as to what should be achieved at what time during project development.
 You could also create a visual guide, such as this
-![An example schedule](schedule.png)
+
+| Task             | 11/24/2025 | 12/01/2025 | 12/08/2025 | 12/15/2025 | 01/05/2026 | 01/12/2026 | 01/19/2026 | 01/26/2026 | 02/02/2026 | 02/09/2026 |
+|-----------------|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|
+| Data Gathering  | X          | X          | X          | X          |            |            |            |            |            |            |
+| Data Cleaning   |            | X          | X          | X          | X          | X          |            |            |            |            |
+| Analysis        |            |            | X          | X          | X          | X          | X          |            |            |            |
+| UI Design       |            |            |            |            | X          | X          | X          | X          | X          |            |
+| Refactoring     |            |            |            |            |            | X          | X          |            |            |            |
+| Presentation    |            |            |            |            | X          | X          | X          | X          | X          | X          |
+
 
 to make sure all relevant aspects of developing an application are accounted for with sufficient time, and in sensible order.
 This can also help you and the tutors to make sure the development does not go off the rails, and thus ensure a finished project at the deadline.
