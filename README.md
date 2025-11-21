@@ -1,6 +1,6 @@
 # Python Sample Project
 
-![A fun little logo to boost engagement.](banner.png)
+![A fun little logo to boost engagement.](DC_Logo.png)
 
 
 Here are some more resources on how to format a markdown file for your project repository:
