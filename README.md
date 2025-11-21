@@ -2,7 +2,6 @@
 
 ![A fun little logo to boost engagement.](banner.png)
 
-This is a blueprint README.md file for you to use as a guideline on how to format your porject outline.
 
 Here are some more resources on how to format a markdown file for your project repository:
 - [GitHub Markdown Guide](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
@@ -42,12 +41,6 @@ Reference your data source(s) as well as any tools you will use to collect it, s
 Will you be using a database system (eg. SQL, MongoDB,...)?
 How will you load and process data, and what libraries do you plan to use for this (eg. pandas/polars, numpy,...)?
 
-### User Management
-
-Will your project have distinct users?
-If so, how do you store and check credentials?
-Are there different roles (eg. customer/admin) with privileges?
-
 ### Interface
 
 What kind of interface are you planning (CLI/GUI)?
@@ -67,40 +60,11 @@ I.e., what kinds of visual representations are suitable for your project?
 Will they be included in a dashboard-like part of your interface, or non-interactive infographics?
 With what libraries will you implement this?
 
-### Other (Specify if applicable):
-Did you come up with a creative idea to include other functionalities not covered by those above? 
-Explain what you did, why this is useful for your project and how you achieved it.
-This point has to be agreed on in advance with you tutor.
 
 ----
 ### Table for self-check
 
 Please make sure to include and fill out one of the following tables according to the project type you chose. This is for monitoring your progress and to ease the evalutation by the tutors. Please note that this table is for guidance only, and in case of any discrepancies, the project description document shall take precedence.
-
-#### Default Project
-
-| Category                     | Details                                                                           | Mark with ✔️ |
-|:-----------------------------|:----------------------------------------------------------------------------------|--------------|
-| 1. Input Data                | Read data from text file “chartIn.txt”                                            |     ...      |
-| 2. Login/Logout              | Login via an interface (e.g., web, local)                                         |              |
-|                              | Four user accounts userID, name, user_name, and password, one admin               |              |
-|                              | No plaintext passwords                                                            |              |
-|                              | Logout with timeout and thank you message                                         |              |
-| 3. Display Seats             | Display the seat chart with letters and symbols                                   |              |
-|                              | Mark occupied seats                                                               |              |
-|                              | Logout with timeout                                                               |              |
-| 4. Reserve/Cancel Seats      | Users can reserve available seats                                                 |              |
-|                              | The admin can cancel reservations                                                 |              |
-| 5. Statistics                | The system offers a statistics area for admin users                               |              |
-|                              | Statistics can be saved into a text file                                          |              |
-| Always mandatory             | Project proposal with incorporated feedback from tutor                            |              |
-|                              | GitHub repo with sensible commit messages, template README, contributions section |              |
-|                              | Frequent commenting                                                               |              |
-|                              | Docstrings for every function/class                                               |              |
-|                              | Testing of relevant functionalities to avoid crashing                             |              |
-|                              | Help page for system                                                              |              |
-|                              | Milestone presentation                                                            |              |
-|                              | AI-Usage Cards                                                                    |              |
 
 
 #### Custom Project
@@ -152,7 +116,7 @@ This can also help you and the tutors to make sure the development does not go o
 Group information:
 - Group name: TBA 
 - Group code: 
-- Group repository: https://github.com/bjarneh22/Python-for-DS-
+- Group repository: https://github.com/bjarneh22/TBA_project
 - Tutor responsible: Constantin Dallinghaus 
 - Group team leader: Jakob Erhard (jakob.erhard01@stud.uni-goettingen.de)
 - Group members: Jakob Erhard, Bjarne Herbst, Eduard Unruh
