@@ -1,0 +1,17 @@
+# Python Cache ignorieren
+__pycache__/
+*.pyc
+
+# Virtuelle Umgebung ignorieren
+venv/
+env/
+.env
+
+# IDE Settings ignorieren
+.vscode/
+.idea/
+
+# Datensätze begrenzen
+data/*.csv
+data/*.json
+!data/.gitkeep  # Aber die .gitkeep Datei behalten wir!
