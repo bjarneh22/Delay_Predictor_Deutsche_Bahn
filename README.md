@@ -1,31 +1,20 @@
-# Python Sample Project
+# DL4Y C4$H
 
-![A fun little logo to boost engagement.](DC_Logo.png)
+<img src="DC_Logo.png" alt="logo" width="200"/>
 
+An application that predicts future delays of train connections in Germany. Based on these predictions, the application provides an overview of adjusted prices for the connections, calculated according to the refund rules of the DB (Deutsche Bahn - German Railway).
 
-Here are some more resources on how to format a markdown file for your project repository:
-- [GitHub Markdown Guide](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
-- [QuickRef Markdown Cheatsheet](https://quickref.me/markdown)
-- [DevHints Markdown Cheatsheet](https://devhints.io/markdown)
-
-One example of a previous project repository can be found [here](https://gitlab.gwdg.de/alrun.naake/caterpillar). Please note that some details of the repository and project structure have changed in the meantime, however, this might give you a rough idea on how to structure your work.
 ----
 ## Description
 
-For your project, you should mention here
+Many train travelers in Germany face frequent delays and often do not reach their destination on time. However, for some travelers, the primary concern is not the delay itself but the rising ticket prices of Deutsche Bahn.
 
-- what your project is
-- why you chose this project and goal, and
-- how you plan to achieve it.
+This application helps train travelers by providing adjusted prices for train connections based on predicted delays. If a train exceeds a certain delay threshold, travelers can get refunds from DB according to their compensation rules. The app therefore enables users to make informed and cost-efficient travel decisions.
 
-In the section on how you aim to achive your goal(s), you may want to include sub-sections for each of the main features your project is comprised of.
-However, keep this part rather short, and preferably move details into the __functionalities__ section.
+In a first step, the required data is imported... (API, dataset of historical data, weather data). After cleaning the data, previously trained machine learning algorithms are applied to predict the delay for the train connection. The results are display in (???) and users can retrieve detailed information on the prediction.
 
 ----
 ## Functionalities
-
-Add your plans (with external libraries if you plan on using any) for any of these subsections, if applicable to your project.
-As mentioned in the **outline document**, at least 60% of these have to be implemented.
 
 ### Data Sources and Retrieval
 
@@ -53,23 +42,10 @@ What statistical analyses will you conduct on your data?
 Will specialized libraries be required for this, and if so, which?
 What quintessential point(s)/takeaways are you planning to substantiate?
 
-### Visualizations
-
-How can you effectively communicate your takeaways (probably from statistical analysis) visually?
-I.e., what kinds of visual representations are suitable for your project?
-Will they be included in a dashboard-like part of your interface, or non-interactive infographics?
-With what libraries will you implement this?
 
 
 ----
 ### Table for self-check
-
-Please make sure to include and fill out one of the following tables according to the project type you chose. This is for monitoring your progress and to ease the evalutation by the tutors. Please note that this table is for guidance only, and in case of any discrepancies, the project description document shall take precedence.
-
-
-#### Custom Project
-
-Remember that for the custom project, 4 out of the 7 categories need fulfillment.
 
 | Category                     | Details                                                                           | Mark with ✔️ |
 |:-----------------------------|:----------------------------------------------------------------------------------|--------------|
@@ -77,15 +53,10 @@ Remember that for the custom project, 4 out of the 7 categories need fulfillment
 |                              | Quality control / cleaning                                                        |              |
 | 2. Data Storage and Handling | Management system                                                                 |              |
 |                              | No plaintext passwords                                                            |              |
-| 3. User Management           | Login with username, pw                                                           |              |
-|                              | Four user accounts userID, name, user_name, and password, one admin               |              |
-|                              | Logout with timeout                                                               |              |
-| 4. Interface                 | CLI, GUI or Web interface for users                                               |              |
+| 3. Interface                 | CLI, GUI or Web interface for users                                               |              |
 |                              | Extensive interface functions (account management, queries, analysis, help)       |              |
-| 5. Statistical Analysis      | Interactive statistics area                                                       |              |
+| 4. Statistical Analysis      | Interactive statistics area                                                       |              |
 |                              | Basic statistics                                                                  |              |
-| 6. Visualisations            | Visualizations displayed or saved                                                 |              |
-| 7. Other                     | All aspects that we agreed on with the tutor                                      |              |
 | Always mandatory             | Project proposal with incorporated feedback from tutor                            |              |
 |                              | GitHub repo with sensible commit messages, template README, contributions section |              |
 |                              | Frequent commenting                                                               |              |
@@ -96,15 +67,17 @@ Remember that for the custom project, 4 out of the 7 categories need fulfillment
 |                              | AI-Usage Cards                                                                    |              |
 
 ----
-## Installation and Usage
+## How to Install
 
-This should inform anyone who looks at your project repository on how they can install and run the project code on their own machine, e.g. by cloning this repository, installing dependencies and running some main script.
+tbd
+
+----
+## How to Use
+
+tbd
 
 ----
 ## Timeline
-
-Give some outline as to what should be achieved at what time during project development.
-You could also create a visual guide, such as this
 
 | Task             | 11/24/2025 | 12/01/2025 | 12/08/2025 | 12/15/2025 | 01/05/2026 | 01/12/2026 | 01/19/2026 | 01/26/2026 | 02/02/2026 | 02/09/2026 |
 |-----------------|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|
@@ -115,33 +88,38 @@ You could also create a visual guide, such as this
 | Refactoring     |            |            |            |            |            | X          | X          |            |            |            |
 | Presentation    |            |            |            |            | X          | X          | X          | X          | X          | X          |
 
-
-to make sure all relevant aspects of developing an application are accounted for with sufficient time, and in sensible order.
-This can also help you and the tutors to make sure the development does not go off the rails, and thus ensure a finished project at the deadline.
-
 ----
 ## Group Details
 
 Group information:
 - Group name: TBA 
-- Group code: 
+- Group code: G08
 - Group repository: https://github.com/bjarneh22/TBA_project
 - Tutor responsible: Constantin Dallinghaus 
 - Group team leader: Jakob Erhard (jakob.erhard01@stud.uni-goettingen.de)
 - Group members: Jakob Erhard, Bjarne Herbst, Eduard Unruh
 
-
 Contribution of each group member:
 
-**Jakob Erhard**: TEXT
+**Jakob Erhard (Data Analysis)**: Elaboration, implementation and testing of machine learning algorithm, including feature engineering, model training and validation
 
-**Bjarne Herbst**: TEXT
+**Bjarne Herbst (Backend & API)**: TEXT
 
-**Eduard Unruh**: TEXT
+**Eduard Unruh (Storage & Data Management)**: TEXT
+
+**All (Frontend and UI)**: TEXT
 
 ----
 ## Acknowlegdments
 
-Here, you can (and should) mention all libraries you used, data sources, as well as other credits such as inspirations for your projects, papers that helped with your methodology or similar things.
+### Libraries
+- tbd
+- tbd
 
-If you want, you can create subsections for all of these, or just create bullet-points for it. If possible, provide a link to the original source(s).
+### Inspirations and Similar Projects
+- https://bahnvorhersage.de/
+- tbd
+
+### References
+- tbd
+- tbd
