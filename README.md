@@ -32,17 +32,41 @@ How will you load and process data, and what libraries do you plan to use for th
 
 ### Interface
 
+**Proposal: web app with streamlit**
 What kind of interface are you planning (CLI/GUI)?
 What operating system will it run on, or will it be a web-based app?
 What libraries do you need for this?
 
 ### Statistical Analysis
 
-What statistical analyses will you conduct on your data?
-Will specialized libraries be required for this, and if so, which?
-What quintessential point(s)/takeaways are you planning to substantiate?
+In order to generate reliable predictions for future train delays, we apply a combination of exploratory data analysis (EDA), feature engineering, and machine learning evaluation techniques.
 
+**Data Cleaning**  
+Data cleaning includes filtering the data, selecting relevant cases, and handling missing values (using **pandas** and **numpy**).
 
+**Exploratory Data Analysis (EDA)**  
+Before modeling, the dataset will be examined to get an impression of the data, detect anomalies, and identify relevant correlations. This includes for example:  
+- Descriptive statistics (using **pandas**, **numpy**)  
+- Correlation analysis (using **pandas**, **scipy**)  
+- Visual analysis (using **matplotlib**)  
+
+**Feature Engineering**  
+Based on EDA results, features influencing the delay of a train will be constructed or transformed. Examples include:  
+- Aggregated historical data on train delays  
+- Derived weather indicators for a given time frame  
+- Categorization of variables  
+Feature engineering will be supported by **pandas**, **numpy**, and model-preprocessing tools from **scikit-learn**.
+
+**Modeling and Evaluation**  
+The application uses machine learning models (e.g., Decision Tree, Random Forest, or Gradient Boosting) to predict expected delays or probabilities of surpassing a certain delay threshold.  
+The model performance will be evaluated with appropriate statistical metrics, such as:  
+- Mean Absolute Error and Root Mean Squared Error  
+- Accuracy, Precision and Recall  
+- Cross-validation  
+These models will be implemented and tested with **scikit-learn** or **LightGBM**.
+
+**Application**  
+After evaluating the different modeling options, the “best” models will be selected. These models are then applied to data chosen by the users (specific train connections). Uncertainty measures, such as prediction intervals for point estimates or classification probabilities, will be displayed in the web app as well.
 
 ----
 ### Table for self-check
@@ -101,19 +125,21 @@ Group information:
 
 Contribution of each group member:
 
-**Member 1 (Data Analysis)**: Elaboration, implementation and testing of machine learning algorithm, including feature engineering, model training and validation
+**Member 1 (Data Analysis)**: Development, implementation, and testing of machine learning models
 
-**Member 2 (Backend & API)**: TEXT
+**Member 2 (Backend & API)**: 
 
-**Member 3 (Storage & Data Management)**: TEXT
+**Member 3 (Storage & Data Management)**: 
 
-**All (Frontend and UI)**: TEXT
+**All (Frontend & UI)**: Development of the web application, including user interface design and integration of statistical results.
+
 
 ----
 ## Acknowlegdments
 
 ### Libraries
-- tbd
+- pandas
+- numpy
 - tbd
 
 ### Inspirations and Similar Projects
