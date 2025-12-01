@@ -27,6 +27,7 @@ Reference your data source(s) as well as any tools you will use to collect it, s
 
 ### Data Storage and Handling
 **Storage**
+
 Our project uses a hybrid storage approach, depending on the type of data:
   1. Train data
      - We use a SQLite database as the primary storage system.
@@ -39,6 +40,7 @@ Our project uses a hybrid storage approach, depending on the type of data:
      - Required tools: open(), csv, datetime (for timestamps)
 
 **Handling**
+
 To load, process, and analyze our data, we use several Python libraries:
 1. NumPy: Used for numerical operations.
 2. Pandas: Used for tabular data handling, transformations, and preparing data for visualizations.
