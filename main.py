@@ -1,14 +1,23 @@
 # import the self created function from own module 
-from src.collector import get_station_id
+from src.collector import get_station_id, get_departures
 
-station_name = "Goettingen"
+start = "München"
+end = "Berlin"
 
-print(f"Suche nach Stationen: {station_name}")
-
-station_id = get_station_id(station_name)
+print(f"{start} -> {end}")
+station_id = get_station_id(start)
 
 # check if we have a station id for the requested station
 if station_id:
-    print(f"The Station ID for {station_name} is: {station_id}")
-else: 
-    print("No station found")
+    df = get_departures(station_id, destination=end)
+
+    if not df.empty:
+        print("\n Aktuelle Verbindungen nach {end}")
+        print(df[["train_line", "direction", "delay_minutes"]].head(20))
+
+    else: 
+        print(f"Aktuell keine Verbindungen von {start} nach {end}")
+
+else:
+    print("Keine Station mit diesem Namen gefunden")
+
