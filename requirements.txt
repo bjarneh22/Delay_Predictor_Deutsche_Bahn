@@ -2,3 +2,4 @@ requests
 numpy
 matplotlib
 pandas
+json
