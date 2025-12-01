@@ -18,13 +18,17 @@ In a first step, the required data is imported... (API, dataset of historical da
 
 ### Data Sources and Retrieval
 
-Will your data be sourced
-- From an open dataset (eg. kaggle, data paper,...)
-- Collected from an API or a Webcrawler
-- From your own research
+Data is collected in a hybrid manner
+   1. For the collection of the historical data we use an open dataset https://piebro.github.io/deutsche-bahn-statistics
+     - Used for training a model to recognize delay patterns and do exploratory analysis on 
+   2. For the collection of the live data we use an API https://v6.db.transport.rest/api.html
+     - Provides information on current trains which the model can make predictions on  
 
-Reference your data source(s) as well as any tools you will use to collect it, such as API libraries, conversion tools etc.
-
+Libraries that are required for this step are 
+  1. requests
+  2. pandas & datasets
+  3. sqlite3  
+      
 ### Data Storage and Handling
 **Storage**  
 Our project uses a hybrid storage approach, depending on the type of data:
