@@ -1,6 +1,7 @@
 # import the relevant packages for the API Call
 import requests
 import pandas as pd
+import json
 
 
 def get_station_id(station_name): 
@@ -20,15 +21,23 @@ def get_station_id(station_name):
         response = requests.get(url, params=parameters)
         data = response.json()
 
-        # Read the data from the source
-        result1 = data.get("0")
+        # --- DEBUGGING START ---
+        '''
+        print(f"\n--- DEBUG: Rohe API-Antwort für '{station_name}' ---")
+        print(f"Datentyp: {type(data)}") # (Notebook 01: type())
+        # Wir nutzen json.dumps für "Pretty Printing" mit Einrückung (indent=2)
+        print(json.dumps(data, indent=2)) 
+        print("----------------------------------------------------\n")
+        '''
+        # --- DEBUGGING ENDE ---
 
-        if result1:
-            return result1["id"]
-        else:
+        # Read the data from the source
+        if data:
+            first_element = list(data.values())[0]
+            return first_element["id"]
+        else: 
             return None
         
     except Exception as e:
         print(f"Fehler: {e}")
         return None
-        
