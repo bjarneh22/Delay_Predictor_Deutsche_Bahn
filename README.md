@@ -150,7 +150,7 @@ Contribution of each group member:
 
 **Bjarne Herbst (Backend & API)**: 
 
-**Eduard Unruh (Storage & Data Management)**: 
+**Eduard Unruh (Storage & Data Management)**: Design and implementation of data storage, including database structure, management of train data, and ensuring efficient data processing and access
 
 **All (Frontend & UI)**: Development of the web application, including user interface design and integration of statistical results.
 
@@ -161,7 +161,8 @@ Contribution of each group member:
 ### Libraries
 - pandas
 - numpy
-- tbd
+- sqlite3
+- streamlit
 
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
