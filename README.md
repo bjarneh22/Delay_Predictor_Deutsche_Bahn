@@ -26,16 +26,37 @@ Will your data be sourced
 Reference your data source(s) as well as any tools you will use to collect it, such as API libraries, conversion tools etc.
 
 ### Data Storage and Handling
+**Storage**
+Our project uses a hybrid storage approach, depending on the type of data:
+  1. Train data
+     - We use a SQLite database as the primary storage system.
+     - Allows structured storage of train, station, and delay data
+     - Supports efficient queries for filtering, sorting, joining, and aggregation
+     - Required package: sqlite3
+  
+  2. Debugging and processing logs
+     - Errors and system events will be captured in simple text or CSV log files.
+     - Required tools: open(), csv, datetime (for timestamps)
 
-Will you be using a database system (eg. SQL, MongoDB,...)?
-How will you load and process data, and what libraries do you plan to use for this (eg. pandas/polars, numpy,...)?
+**Handling**
+To load, process, and analyze our data, we use several Python libraries:
+1. NumPy: Used for numerical operations.
+2. Pandas: Used for tabular data handling, transformations, and preparing data for visualizations.
+3. Lambda functions: Used for filtering and sorting operations.
+
+This combination allows us to handle incoming API data, transform it, store it, and later analyse it for visualizations and reporting.
 
 ### Interface
 
-**Proposal: web app with streamlit**
-What kind of interface are you planning (CLI/GUI)?
-What operating system will it run on, or will it be a web-based app?
-What libraries do you need for this?
+**Web app with streamlit**
+We plan on building a web app with streamlit with the corresponding streamlit package.
+
+The app will integrate with the other libraries used throughout the project, including:
+- pandas for data manipulation and analysis
+- numpy for numerical operations
+- sqlite3 for database access
+
+This approach ensures a seamless connection between our data storage, analysis, and user-facing interface.
 
 ### Statistical Analysis
 
