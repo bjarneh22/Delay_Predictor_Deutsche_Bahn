@@ -1,6 +1,7 @@
 # import the relevant packages for the API Call
 import requests
 import pandas as pd
+from datetime import datetime
 
 # get the station id 
 def get_station_details(station_name): 
@@ -44,8 +45,95 @@ def get_station_details(station_name):
     except Exception as e:
         print(f"Fehler: {e}")
         return None
+    
+# define a function to unify the datetimes
+def parse_datetime(date_time):
+    if not date_time:
+        return None
+    try:
+        return datetime.fromisoformat(date_time)
+    except AttributeError:
+        try:
+            clean_str = date_time.split(date_time)
+            return datetime.strptime(clean_str, "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            return None
+    except ValueError:
+        None
+    
 
-# get the information about the delay
+# get information about a journey
+def get_journeys(start_id, end_id, departure_time=None, duration=60):
+    # store the url for the API 
+    url = "https://v6.db.transport.rest/journeys"
+
+    # Define the parameters for the call
+    parameters = {
+        "from" : start_id, 
+        "to" : end_id,
+        "results" : 10,
+        "duration" : duration,
+        "departure_time" : departure_time
+    }
+
+    # Define which types of trains are long distance
+    long_distance_trains = ["ICE", "IC", "EC", "ECE", "RJ", "RJX", "FLX", "NJ"]
+
+    # Call the data from the source
+    try:
+        response = requests.get(url, params=parameters)
+        data = response.json()
+
+        # Store the journeys as list
+        journey_list = data.get("journeys", [])
+
+        cleaned_data = []
+
+        # Iterate through all the journeys and store matching ones in cleaned_data
+        for journey in journey_list:
+            legs = journey.get("legs", [])
+            if not legs:
+                continue
+
+            first_leg = legs[0]
+            last_leg = legs[-1]
+
+            line_info = first_leg.get("line", [])
+            train_type = line_info.get("productName", "")
+            train_name = line_info.get("name", "Unknown")
+
+            if train_type not in long_distance_trains:
+                continue
+        
+            # compute the delay
+            planned_arrival = last_leg.get("plannedArrival")
+            actual_arrival = last_leg.get("arrival")
+
+            delay_minutes = 0
+            if planned_arrival and actual_arrival:
+                d_plan = parse_datetime(planned_arrival)
+                d_actual = parse_datetime(actual_arrival)
+                delay_minutes = (d_actual - d_plan).total_seconds() / 60
+
+            journey_data = {
+                "train_line" : train_name,
+                "departure_time" : first_leg.get("plannedDeparture"),
+                "arrival_time" : planned_arrival,
+                "delay_minutes" : delay_minutes
+            }
+
+            # Store the journey in cleaned_data
+            cleaned_data.append(journey_data)
+        
+        return pd.DataFrame(cleaned_data)
+    
+    except Exception as e:
+        print(f"Fehler bei Journeys: {e}")
+        return pd.DataFrame()
+        
+
+
+# get the information about a trip
 def get_departures(station_id, duration=60, destination=None):
 
     # store the url for the API 
@@ -55,7 +143,11 @@ def get_departures(station_id, duration=60, destination=None):
     # Define the parameters for the call 
     parameters = {
         "duration": duration,
-        "results": 100
+        "results": 2000,
+        'bus': 'false',
+        'suburban': 'false',
+        'subway': 'false',
+        'regional': 'false'
     }
 
     # Define which types of trains are long distance
