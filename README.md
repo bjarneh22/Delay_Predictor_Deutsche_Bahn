@@ -11,7 +11,7 @@ Many train travelers in Germany face frequent delays and often do not reach thei
 
 This application helps train travelers by providing adjusted prices for train connections based on predicted delays. If a train exceeds a certain delay threshold, travelers can get refunds from DB according to their compensation rules. The app therefore enables users to make informed and cost-efficient travel decisions.
 
-In a first step, the required data is imported... (API, dataset of historical data, weather data). After cleaning the data, previously trained machine learning algorithms are applied to predict the delay for the train connection. The results are display in (???) and users can retrieve detailed information on the prediction.
+In a first step, the required data is imported. After cleaning the data, previously trained machine learning algorithms are applied to predict the delay for the train connection. The results are display in a web app and users can retrieve detailed information on the prediction.
 
 ----
 ## Functionalities
