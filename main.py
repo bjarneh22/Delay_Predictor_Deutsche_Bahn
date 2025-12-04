@@ -32,6 +32,11 @@ if end_details:
         print(f"Niederschlag: {start_weather['precipitation']}mm")
         print(f"Wind: {start_weather['wind_speed']}km/h")
 
+    if end_weather:
+        print(f"Wetter vor Ort: {end_weather['temperature']}°C")
+        print(f"Niederschlag: {end_weather['precipitation']}mm")
+        print(f"Wind: {end_weather['wind_speed']}km/h")
+
     # get the trains and store them 
     print(f"Züge nach {end}:")
     df = get_journeys(start_id, end_id)
