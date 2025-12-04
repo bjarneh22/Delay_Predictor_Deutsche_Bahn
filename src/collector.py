@@ -6,6 +6,10 @@ from datetime import datetime
 # get the station id 
 def get_station_details(station_name): 
 
+    '''
+    This function retrieves the station ID, latitude, and longitude for a given station name using the DB Transport API.
+    '''
+
     # store the url for the API 
     source_url = "https://v6.db.transport.rest"
     url = f"{source_url}/stations"
@@ -46,24 +50,15 @@ def get_station_details(station_name):
         print(f"Fehler: {e}")
         return None
     
-# define a function to unify the datetimes
-def parse_datetime(date_time):
-    if not date_time:
-        return None
-    try:
-        return datetime.fromisoformat(date_time)
-    except AttributeError:
-        try:
-            clean_str = date_time.split(date_time)
-            return datetime.strptime(clean_str, "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            return None
-    except ValueError:
-        None
-    
 
 # get information about a journey
 def get_journeys(start_id, end_id, departure_time=None, duration=60):
+
+    '''
+    This function retrieves information about journeys between two stations using the DB Transport API.
+    It filters for long-distance trains and calculates delays.
+    '''
+
     # store the url for the API 
     url = "https://v6.db.transport.rest/journeys"
 
@@ -89,6 +84,14 @@ def get_journeys(start_id, end_id, departure_time=None, duration=60):
 
         cleaned_data = []
 
+        def get_datetime_object(date_time_str):
+            if not date_time_str:
+                return None
+            try:
+                return datetime.fromisoformat(date_time_str)
+            except ValueError:
+                return None
+
         # Iterate through all the journeys and store matching ones in cleaned_data
         for journey in journey_list:
             legs = journey.get("legs", [])
@@ -111,15 +114,16 @@ def get_journeys(start_id, end_id, departure_time=None, duration=60):
 
             delay_minutes = 0
             if planned_arrival and actual_arrival:
-                d_plan = parse_datetime(planned_arrival)
-                d_actual = parse_datetime(actual_arrival)
+                d_plan = get_datetime_object(planned_arrival)
+                d_actual = get_datetime_object(actual_arrival)
                 delay_minutes = (d_actual - d_plan).total_seconds() / 60
 
             journey_data = {
                 "train_line" : train_name,
-                "departure_time" : first_leg.get("plannedDeparture"),
-                "arrival_time" : planned_arrival,
-                "delay_minutes" : delay_minutes
+                "departure_time" : datetime.fromisoformat(first_leg.get("plannedDeparture")),
+                "planned_arrival_time" : d_plan,
+                "actual_arrival_time" : d_actual, 
+                "current_delay" : delay_minutes
             }
 
             # Store the journey in cleaned_data
@@ -130,9 +134,47 @@ def get_journeys(start_id, end_id, departure_time=None, duration=60):
     except Exception as e:
         print(f"Fehler bei Journeys: {e}")
         return pd.DataFrame()
-        
 
 
+def get_weather(lat, lon):
+
+    '''
+    This function retrieves the current weather information for a given latitude and longitude using the Open Meteo API.
+    It returns a dictionary containing temperature, precipitation, and wind speed.'''
+
+    # Store the url for the API 
+    url = "https://api.open-meteo.com/v1/forecast"
+
+    # Define the parameters for the call 
+    parameters = {
+        "latitude" : lat,
+        "longitude" : lon,
+        "current" : "temperature_2m,precipitation,wind_speed_10m"
+    }
+
+    # call the data from the source
+    try: 
+        response = requests.get(url, params=parameters)
+        data = response.json()
+
+        # get the current weather data for the latitude and longitude of a specific train 
+        current = data.get("current", {})
+
+        # store the weather info 
+        weather_info = {
+            "temperature" : current.get("temperature_2m"),
+            "precipitation" : current.get("precipitation"),
+            "wind_speed" : current.get("wind_speed_10m")
+        }
+
+        return weather_info
+    
+    except Exception as e:
+        print(f"Fehler beim Wetter: {e}")
+        return None
+    
+
+'''
 # get the information about a trip
 def get_departures(station_id, duration=60, destination=None):
 
@@ -196,37 +238,4 @@ def get_departures(station_id, duration=60, destination=None):
     except Exception as e:
         print(f"Fehler: {e}")
         return None
-
-
-# Write a function to get the weather information for a given trip 
-def get_weather(lat, lon):
-    # Store the url for the API 
-    url = "https://api.open-meteo.com/v1/forecast"
-
-    # Define the parameters for the call 
-    parameters = {
-        "latitude" : lat,
-        "longitude" : lon,
-        "current" : "temperature_2m,precipitation,wind_speed_10m"
-    }
-
-    # call the data from the source
-    try: 
-        response = requests.get(url, params=parameters)
-        data = response.json()
-
-        # get the current weather data for the latitude and longitude of a specific train 
-        current = data.get("current", {})
-
-        # store the weather info 
-        weather_info = {
-            "temperature" : current.get("temperature_2m"),
-            "precipitation" : current.get("precipitation"),
-            "wind_speed" : current.get("wind_speed_10m")
-        }
-
-        return weather_info
-    
-    except Exception as e:
-        print(f"Fehler beim Wetter: {e}")
-        return None
+'''
