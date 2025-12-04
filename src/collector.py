@@ -20,7 +20,7 @@ def get_station_details(station_name):
         "limit": 1
     }
 
-    # Call the data from the source
+    # Call the data from the source with try-catch
     try:
         response = requests.get(url, params=parameters)
         data = response.json()
@@ -45,7 +45,7 @@ def get_station_details(station_name):
         else: 
             return None
 
-    # If try does not yield anything         
+    # if exception occurs during try
     except Exception as e:
         print(f"Fehler: {e}")
         return None
@@ -195,7 +195,7 @@ def get_departures(station_id, duration=60, destination=None):
     # Define which types of trains are long distance
     long_distance_trains = ["ICE", "IC", "EC", "ECE", "RJ", "RJX", "FLX", "NJ"]
 
-    # Call the data from the source
+    # Call the data from the source with try-catch 
     try:
         response = requests.get(url, params=parameters)
         data = response.json()
@@ -235,6 +235,7 @@ def get_departures(station_id, duration=60, destination=None):
         df = pd.DataFrame(cleaned_data)
         return df
     
+    # If exception occurs during try
     except Exception as e:
         print(f"Fehler: {e}")
         return None
