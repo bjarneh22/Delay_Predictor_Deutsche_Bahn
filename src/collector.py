@@ -5,11 +5,6 @@ from datetime import datetime
 
 # get the station id 
 def get_station_details(station_name): 
-
-    '''
-    This function retrieves the station ID, latitude, and longitude for a given station name using the DB Transport API.
-    '''
-
     # store the url for the API 
     source_url = "https://v6.db.transport.rest"
     url = f"{source_url}/stations"
@@ -53,11 +48,6 @@ def get_station_details(station_name):
 
 # get information about a journey
 def get_journeys(start_id, end_id, departure_time=None, duration=60):
-
-    '''
-    This function retrieves information about journeys between two stations using the DB Transport API.
-    It filters for long-distance trains and calculates delays.
-    '''
 
     # store the url for the API 
     url = "https://v6.db.transport.rest/journeys"
@@ -135,12 +125,8 @@ def get_journeys(start_id, end_id, departure_time=None, duration=60):
         print(f"Fehler bei Journeys: {e}")
         return pd.DataFrame()
 
-
+# get weather information for a station 
 def get_weather(lat, lon):
-
-    '''
-    This function retrieves the current weather information for a given latitude and longitude using the Open Meteo API.
-    It returns a dictionary containing temperature, precipitation, and wind speed.'''
 
     # Store the url for the API 
     url = "https://api.open-meteo.com/v1/forecast"
