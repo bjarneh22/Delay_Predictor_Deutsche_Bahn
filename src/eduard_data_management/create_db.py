@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 # prepare sql statements to create the different tables
 sql_statements = [
@@ -7,6 +8,21 @@ sql_statements = [
     "PRAGMA foreign_keys = ON;",
 
     "PRAGMA journal_mode =WAL;",
+
+    """CREATE TABLE IF NOT EXISTS hist_train_delay(
+            uid INTEGER PRIMARY KEY AUTOINCREMENT,
+            station_id INTEGER,
+            start_station_name TEXT,
+            end_station_name TEXT,
+            train_name TEXT,
+            train_type TEXT,
+            departure_planned TEXT,
+            departure_actual TEXT,
+            arrival_planned TEXT,
+            arrival_actual TEXT,
+            delay_in_min INTEGER
+    );
+    """,
 
     """CREATE TABLE IF NOT EXISTS stations(
             station_id TEXT PRIMARY KEY,
@@ -55,8 +71,15 @@ sql_statements = [
     """
 ]
 
+#resolving path issues
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DB_PATH = os.path.join(DATA_DIR, "hist_train_delay.db")
+
+
 try:
-    with sqlite3.connect('../train_delay.db') as conn:
+    with sqlite3.connect(DB_PATH) as conn:
 
         # create a cursor
         cursor = conn.cursor()
