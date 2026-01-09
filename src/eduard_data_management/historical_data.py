@@ -2,7 +2,7 @@ from datasets import load_dataset
 import sqlite3
 import csv
 import os
-'''
+
 
 #Load the huggingface dataset and load it into the train_delay.csv
 ds = load_dataset(
@@ -19,11 +19,12 @@ with open("train_delay.csv", "w", newline="", encoding="utf-8") as f:
         "departure_planned", "departure_actual",
         "arrival_planned", "arrival_actual", "delay_in_min"
     ])
-'''
-BATCH_SIZE = 1000 #to add a counter to the process
-counter = 0
 
-'''
+
+#BATCH_SIZE = 1000 #to add a counter to the process
+#counter = 0
+
+
 for row in ds:
     if row["train_type"] in {"ICE","IC","EC","ECE","RJ","RJX","FLX","NJ"}:
         writer.writerow([
@@ -44,7 +45,7 @@ for row in ds:
         if counter % BATCH_SIZE == 0:
             print(f"Commited {counter} rows")
 
-'''
+
 #read csv and import into db
 with open("train_delay.csv", newline = "", encoding = "utf-8") as f:
     reader = csv.reader(f)
