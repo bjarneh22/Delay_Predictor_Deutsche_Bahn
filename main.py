@@ -2,7 +2,7 @@
 from src.collector import get_station_details, get_journeys, get_weather
 
 # define start- and end-point
-start = "München"
+start = "Muenchen"
 end = "Berlin"
 
 
