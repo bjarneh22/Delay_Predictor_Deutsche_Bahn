@@ -22,7 +22,9 @@ Data is collected in a hybrid manner
    1. For the collection of the historical data we use an open dataset https://piebro.github.io/deutsche-bahn-statistics
      - Used for training a model to recognize delay patterns and do exploratory analysis on 
    2. For the collection of the live data we use an API https://v6.db.transport.rest/api.html
-     - Provides information on current trains which the model can make predictions on  
+     - Provides information on current trains which the model can make predictions on
+
+After collecting the relevant data, it will be checked to ensure quality and correctness.
 
 Libraries that are required for this step are 
   1. requests
@@ -30,6 +32,7 @@ Libraries that are required for this step are
   3. sqlite3  
       
 ### Data Storage and Handling
+
 **Storage**  
 Our project uses a hybrid storage approach, depending on the type of data:
   1. Train data
@@ -91,7 +94,7 @@ The model performance will be evaluated with appropriate statistical metrics, su
 These models will be implemented and tested with **scikit-learn** or **LightGBM**.
 
 **Application**  
-After evaluating the different modeling options, the “best” models will be selected. These models are then applied to data chosen by the users (specific train connections). Uncertainty measures, such as prediction intervals for point estimates or classification probabilities, will be displayed in the web app as well.
+These models are then applied to data selected by users (specific train connections). Uncertainty measures, such as prediction intervals for point estimates or classification probabilities, can also be displayed in the web app. Users will be able to interactively choose between different models, access information about the modeling process, and download the results as a TXT file.
 
 ----
 ### Table for self-check
@@ -152,7 +155,7 @@ Contribution of each group member:
 
 **Member 1 (Data Analysis)**: Development, implementation, and testing of machine learning models
 
-**Member 2 (Backend & API)**: 
+**Member 2 (Backend & API)**: Data collection and implementation of required API calls
 
 **Member 3 (Storage & Data Management)**: Design and implementation of data storage, including database structure, management of train data, and ensuring efficient data processing and access
 
@@ -167,6 +170,11 @@ Contribution of each group member:
 - numpy
 - sqlite3
 - streamlit
+- requests
+- datasets
+- scipy
+- scikit-learn
+- matplotlib
 
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
