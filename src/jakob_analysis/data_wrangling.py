@@ -14,7 +14,6 @@ df_raw = pd.read_sql_query("SELECT * from train_delay", con)
 con.close()
 
 # %% DATA INSPECTION
-print(f"Rows: {df_raw.shape[0]}, Columns: {df_raw.shape[1]}")
 df_raw.info()
 df_raw.head(5)
 print(df_raw["delay_in_min"].describe())
