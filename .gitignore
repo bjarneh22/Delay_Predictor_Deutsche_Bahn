@@ -14,4 +14,9 @@ env/
 # Datensätze begrenzen
 data/*.csv
 data/*.json
+data/*.duckdb
+data/parquet/
 !data/.gitkeep  # Aber die .gitkeep Datei behalten wir!
+
+# ignore helper from Jakob
+helper_jakob.txt
