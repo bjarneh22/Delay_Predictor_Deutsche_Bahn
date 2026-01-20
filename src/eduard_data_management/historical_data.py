@@ -43,7 +43,7 @@ local_files_str = [str(f) for f in local_files]
 allowed_types = ["ICE","IC","EC","ECE"] #right now "NJ", "RJ", "RJX" and "FLX" are left out for easier handling
 
 # connect to db
-con = duckdb.connect("train.duckdb")
+con = duckdb.connect("data/train.duckdb")
 
 # create the train_delay table in train.duckdb
 con.execute("""
