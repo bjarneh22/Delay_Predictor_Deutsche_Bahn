@@ -142,10 +142,14 @@ if __name__ == "__main__":
                     print(f"Lade Trip {i}/{len(departures)}: {line_name}")
                     
                     trip_data = fetcher.trip_details(trip_id)
-                    df_trip = fetcher.create_dataframe(trip_data, ride_id=i)
+                    if trip_data is not None:
+                        df_trip = fetcher.create_dataframe(trip_data, ride_id=i)
                     
                     if not df_trip.empty:
                         all_trips_dfs.append(df_trip)
+                        
+                    else: 
+                        print(f"Details für Trip {line_name} konnten nicht verarbeitete werden")
             
             # Zusammenfügen aller DataFrames
             if all_trips_dfs:
