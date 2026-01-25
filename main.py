@@ -1,5 +1,5 @@
 # import the functions from collector.py
-from src.collector import get_station_details, get_journeys, get_weather
+from src.bjarne_api.collector import get_station_details, get_journeys, get_weather
 
 # import the functions for data insertion(DI)
 import sqlite3
