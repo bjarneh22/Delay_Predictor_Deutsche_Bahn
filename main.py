@@ -3,7 +3,7 @@ from src.bjarne_api.collector import get_station_details, get_journeys, get_weat
 
 # import the functions for data insertion(DI)
 import sqlite3
-from db.insert_data import add_station, add_weather, add_journeys
+from src.eduard_data_management.insert_data import add_station, add_weather, add_journeys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
