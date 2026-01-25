@@ -32,7 +32,7 @@ class Fetcher:
         # Abfrageparameter definieren
         parameters = {
             "results": 150,       
-            "duration": 60,       
+            "duration": 120,       
             "suburban": "false",  
             "subway": "false",    
             "tram": "false",      
