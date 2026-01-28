@@ -102,11 +102,19 @@ def get_journeys(start_id, end_id, departure_time=None, duration=60):
             planned_arrival = last_leg.get("plannedArrival")
             actual_arrival = last_leg.get("arrival")
 
-            delay_minutes = 0
-            if planned_arrival and actual_arrival:
-                d_plan = get_datetime_object(planned_arrival)
-                d_actual = get_datetime_object(actual_arrival)
+            # compute the delay
+            planned_arrival = last_leg.get("plannedArrival")
+            actual_arrival = last_leg.get("arrival")
+
+            delay_minutes = 0.0 # Standardwert als Float
+            d_plan = get_datetime_object(planned_arrival)
+            d_actual = get_datetime_object(actual_arrival)
+
+            # Nur rechnen, wenn beide Werte tatsächliche datetime-Objekte sind
+            if d_plan is not None and d_actual is not None:
                 delay_minutes = (d_actual - d_plan).total_seconds() / 60
+            else:
+                delay_minutes = 0.0
 
             journey_data = {
                 "train_line" : train_name,
@@ -158,7 +166,55 @@ def get_weather(lat, lon):
     except Exception as e:
         print(f"Fehler beim Wetter: {e}")
         return None
+
+# Hier die neue Funktion für historische Wetterdaten @Eddi
+def get_historical_weather(lat, lon, date):
     
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    
+    parameters = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": date,
+        "end_date": date,
+        "hourly": "temperature_2m,precipitation,wind_speed_10m",
+        "timezone": "Europe/Berlin"
+    }
+    
+    try: 
+        response = requests.get(url, params=parameters)
+        response.raise_for_status()
+        data = response.json()
+        
+        hourly = data.get("hourly", {})
+        if not hourly or "temperature_2m" not in hourly:
+            return {
+                "temp_avg": None,
+                "precipitation_sum": None,
+                "wind_speed_max": None,
+                "weather_staus": "No data"
+            }
+            
+        temperatures = hourly.get("temperature_2m", [])
+        precipitations = hourly.get("precipitation", [])
+        wind_speeds = hourly.get("wind_speed_10m", [])
+        
+        return {
+            "temp_avg": round(sum(temperatures) / len(temperatures), 2) if temperatures else None,
+            "precipitation_sum": round(sum(precipitations), 2) if precipitations else None,
+            "wind_speed_max": round(max(wind_speeds), 2) if wind_speeds else None,
+            "weather_status": "ok"
+        }
+        
+    except Exception as e:
+        print(f"Fehler beim Abrufen der historischen Wetterdaten: {e}")
+        return {
+            "temp_avg": None,
+            "precipitation_sum": None,
+            "wind_speed_max": None,
+            "weather_status": "Error"
+        }
+        
 
 '''
 # get the information about a trip
