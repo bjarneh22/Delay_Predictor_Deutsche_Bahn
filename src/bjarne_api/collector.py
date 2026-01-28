@@ -167,6 +167,7 @@ def get_weather(lat, lon):
         print(f"Fehler beim Wetter: {e}")
         return None
 
+# Hier die neue Funktion für historische Wetterdaten @Eddi
 def get_historical_weather(lat, lon, date):
     
     url = "https://archive-api.open-meteo.com/v1/archive"
