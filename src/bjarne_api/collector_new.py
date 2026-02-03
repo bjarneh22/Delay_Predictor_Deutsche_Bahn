@@ -2,7 +2,20 @@ import requests
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
-from collector import get_weather
+
+def get_weather(lat: Any, lon: Any) -> Dict[str, Any]:
+    """
+    Liefert Wetterdaten zurück.
+    Aktuell als Platzhalter, damit der Code nicht abstürzt.
+    """
+    # Hier könntest du später die echte Logik einfügen, wenn du sie brauchst.
+    # Für jetzt reichen Dummy-Werte, damit die App läuft.
+    return {
+        "temperature": 15.0, 
+        "precipitation": 0.0, 
+        "wind_speed": 10.0
+    }
+# -----------------------------
 
 class Fetcher:
     BASE_URL = "https://v6.db.transport.rest"
