@@ -5,7 +5,7 @@ import duckdb
 import pandas as pd
 
 
-# set the url to the path that has the .parquet files for the huggingface dataset
+# Set the url to the path that has the .parquet files for the huggingface dataset
 url = "https://huggingface.co/api/datasets/piebro/deutsche-bahn-data/parquet/default/train"
 
 # set directories so that python knows where to read data from and where to place the db
@@ -17,14 +17,14 @@ PARQUET_DIR = os.path.join(DATA_DIR, "parquet")
 parquet_folder = Path(PARQUET_DIR)
 parquet_folder.mkdir(exist_ok=True)
 
-# this function can lead to errors because of too many calls of the url.
+# This function can lead to errors because of too many calls of the url.
 # If it doesn't work just restart the code or wait for a few minutes  (may take some reruns).
 response = requests.get(url)
 
 response.raise_for_status()
 parquet_urls = response.json()
 
-# only downloads the parquet files that aren't already downloaded (in total 822 files)
+# Only downloads the parquet files that aren't already downloaded (in total 857 files)
 for url in parquet_urls:
     filename = parquet_folder / url.split("/")[-1]
     if not filename.exists():
@@ -39,88 +39,141 @@ local_files = list(parquet_folder.glob("*.parquet"))
 local_files_str = [str(f) for f in local_files]
 
 
-# only filter for ICE, IC, EC and ECE because they have the most consistent data naming
-allowed_types = ["ICE","IC","EC","ECE"] #right now "NJ", "RJ", "RJX" and "FLX" are left out for easier handling
+# Only filter for ICE, IC and EC because they have the most consistent data naming
+allowed_types = ["ICE","IC","EC"] #right now "NJ", "RJ", "RJX", "ECE" and "FLX" are left out for easier handling
 
-# connect to db
+# Connect to DuckDB
 con = duckdb.connect("data/train.duckdb")
 
-# create the train_delay table in train.duckdb
+
+# This will be the view with all our data present inside, from this point onwards we modify and filter
+# We directly set the datatype of each column and restrict the data only to our allowed_types
 con.execute("""
-CREATE OR REPLACE TABLE train_delay AS
-
--- create a temporary table
-
-WITH ordered AS (
-    SELECT eva,
-        station_name,              
-        final_destination_station,
-        train_name,
-        train_type,
-        departure_planned_time,
-        departure_change_time,
-        arrival_planned_time,
-        arrival_change_time,
-        delay_in_min,
-        is_canceled,
-        
-        -- previous planned departure for the same train
-        
-        LAG(departure_planned_time)
-            OVER (PARTITION BY train_name ORDER BY departure_planned_time)
-            AS prev_time
-    FROM read_parquet(?, union_by_name = TRUE)
-    WHERE train_type = ANY(?)
-),
-per_train_journeys AS (
-    SELECT *,
-    
-           -- increment journey id when a new run starts
-           
-           SUM(
-               CASE
-                   WHEN prev_time IS NULL THEN 1
-                   
-                   -- long gap indicates a new operational journey
-                   
-                   WHEN departure_planned_time - prev_time > INTERVAL '6 HOURS' THEN 1
-                   ELSE 0
-               END
-           ) OVER (
-               PARTITION BY train_name
-               ORDER BY departure_planned_time
-               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-           ) AS journey_id_train 
-    FROM ordered
-)
-SELECT *,
-
-       -- global journey id across all trains
-       
-       DENSE_RANK() OVER (
-           ORDER BY train_name, journey_id_train
-       ) AS journey_id
-FROM per_train_journeys
+CREATE OR REPLACE TEMP TABLE raw_clean AS
+SELECT
+    station_name::VARCHAR AS station_current,
+    final_destination_station::VARCHAR AS station_dest,
+    train_name::VARCHAR AS train_name,
+    train_type::VARCHAR AS train_type,
+    departure_planned_time::TIMESTAMP AS departure_planned,
+    arrival_planned_time::TIMESTAMP AS arrival_planned,
+    departure_change_time::TIMESTAMP AS departure_real,
+    arrival_change_time::TIMESTAMP AS arrival_real,
+    delay_in_min::INT AS delay,
+    is_canceled::BOOL AS canceled
+FROM read_parquet(?, union_by_name = TRUE)
+WHERE train_type = ANY(?)
 """, [local_files_str, allowed_types])
 
-# mit Einschränkungen der Zugarten: 3567509 Zeilen
-# ohne Einschränkungen der Zugarten: 3783460 Zeilen
 
-# with select you can pick which variables you want to see
-# with order you can pick by which the db gets ordered
-# the limit is the amount of shown entries
-first_rows = con.execute("""
-SELECT station_name, final_destination_station, departure_planned_time, journey_id
-FROM train_delay
-ORDER BY journey_id
-LIMIT 500
-""").df()
+# Add a column event_time so that we can order by it (without departure_planned and arrival_planned are NaT sometimes)
+con.execute("""
+CREATE OR REPLACE TEMP VIEW ordered AS
+SELECT *,
+    COALESCE(departure_planned, arrival_planned) AS event_time
+FROM raw_clean
+""")
 
-# to make sure every entry is seen
-pd.set_option('display.max_rows', 1000)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 200)
-pd.set_option('display.max_colwidth', None)
+# Here we take a look if start and end rows are correctly flagged (i.e. start if arrival_planned is NaT and same for departure_planned)
+con.execute("""
+CREATE OR REPLACE VIEW ride_flags AS
+SELECT *,
+    CASE
+        WHEN arrival_planned IS NULL AND departure_planned IS NOT NULL THEN 1
+        ELSE 0
+    END AS start_flag,
+    CASE
+        WHEN departure_planned IS NULL
+         AND arrival_planned IS NOT NULL
+         AND station_current = station_dest THEN 1
+        ELSE 0
+    END AS end_flag
+FROM ordered
+""")
 
-print(first_rows)
+# Create a view for the lags (entries before each row) and use time to mark new rides
+con.execute("""
+CREATE OR REPLACE TEMP VIEW ride_with_lag AS
+SELECT *,
+    LAG(event_time) OVER (ORDER BY train_name, event_time) AS prev_event_time,
+    LAG(train_name) OVER (ORDER BY train_name, event_time) AS prev_train
+FROM ride_flags
+""")
 
+# If a row has a start_flag, a different train name or a time gap of more than 2 hours preceeding the row has to belong to a new ride
+con.execute("""
+CREATE OR REPLACE TEMP VIEW ride_starts AS
+SELECT *,
+    CASE
+        WHEN start_flag = 1 THEN 1
+        WHEN prev_train IS DISTINCT FROM train_name THEN 1
+        WHEN prev_event_time IS NOT NULL
+             AND event_time - prev_event_time > INTERVAL '2 HOURS'
+        THEN 1
+        ELSE 0
+    END AS new_ride_flag
+FROM ride_with_lag;
+""")
+
+# Use the new_ride_flag to get ride_ids (unfiltered)
+con.execute("""
+CREATE OR REPLACE TEMP VIEW preliminary_rides AS
+SELECT *,
+    SUM(new_ride_flag) OVER (
+    ORDER BY train_name, event_time
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+) AS ride_id_prelim
+FROM ride_starts
+""")
+
+# The column start_flag and end_flag should each sum up to 1 if the ride is complete
+con.execute("""
+CREATE OR REPLACE TEMP VIEW ride_validation AS
+SELECT
+    ride_id_prelim,
+    SUM(start_flag) AS n_starts,
+    SUM(end_flag)   AS n_ends
+FROM preliminary_rides
+GROUP BY ride_id_prelim
+""")
+
+# Join ride_validation and preliminary_rides to check for completeness
+con.execute("""
+CREATE OR REPLACE TEMP VIEW complete_rides AS
+SELECT r.*
+FROM preliminary_rides r
+JOIN ride_validation v
+  ON r.ride_id_prelim = v.ride_id_prelim
+WHERE v.n_starts = 1
+  AND v.n_ends   = 1
+
+""")
+
+# With all the incomplete data omitted, we renumber the database in order to have a consequent numbering schema from 1 to ... 
+con.execute("""
+CREATE OR REPLACE TEMP VIEW final_rides AS
+SELECT *,
+    DENSE_RANK() OVER (ORDER BY ride_id_prelim) AS ride_id
+FROM complete_rides
+""")
+
+# Materialize the database
+con.execute("""
+CREATE OR REPLACE TABLE train_delay AS
+SELECT
+    ride_id,
+    train_name,
+    train_type,
+    REPLACE(station_current, 'Berlin Hauptbahnhof', 'Berlin Hbf') AS station_current,
+    REPLACE(station_dest, 'Berlin Hauptbahnhof', 'Berlin Hbf') AS station_dest,
+    canceled,
+    arrival_planned,
+    arrival_real,
+    departure_planned,
+    departure_real,
+    event_time,
+    delay
+FROM final_rides
+ORDER BY ride_id, event_time
+""")
+con.close()
