@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
+from collector import *
 
 class Fetcher:
     BASE_URL = "https://v6.db.transport.rest"
@@ -87,6 +88,22 @@ class Fetcher:
         # Start und Ziel basierend auf erster/letzter Station der Route
         station_start = stopovers[0]["stop"]["name"]
         station_end = stopovers[-1]["stop"]["name"]
+        
+        # Koordinaten von Start und Endbahnhof ermitteln
+        first_stop = stopovers[0]["stop"]
+        last_stop = stopovers[-1]["stop"]
+        
+        lat_start = first_stop.get("location", {}).get("latitude")
+        lon_start = first_stop.get("location", {}).get("longitude")
+        
+        lat_end = last_stop.get("location", {}).get("latitude")
+        lon_end = last_stop.get("location", {}).get("longitude")
+        
+        weather_start = get_weather(lat_start, lon_start) if lat_start and lon_start else None
+        weather_end = get_weather(lat_end, lon_end) if lat_end and lon_end else None
+        
+        if weather_start is None: weather_start = {}
+        if weather_end is None: weather_end = {}
 
         content_rows = []
 
@@ -110,6 +127,12 @@ class Fetcher:
                 "planned_departure": stop.get("plannedDeparture"),
                 "actual_departure": stop.get("departure"),
                 "current_delay": delay_minutes,
+                "start_temp": weather_start.get("temperature"),
+                "start_precip": weather_start.get("precipitation"),
+                "start_wind_speed": weather_start.get("wind_speed"),
+                "end_temp": weather_end.get("temperature"),
+                "end_precip": weather_end.get("precipitation"),
+                "end_wind_speed": weather_end.get("wind_speed")
             }
             content_rows.append(stop_data)
 
