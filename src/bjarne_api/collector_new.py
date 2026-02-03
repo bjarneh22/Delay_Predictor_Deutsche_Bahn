@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
-from collector import *
+from collector import get_weather
 
 class Fetcher:
     BASE_URL = "https://v6.db.transport.rest"
@@ -89,7 +89,7 @@ class Fetcher:
         station_start = stopovers[0]["stop"]["name"]
         station_end = stopovers[-1]["stop"]["name"]
         
-        # Koordinaten von Start und Endbahnhof ermitteln
+        # Wetterdaten für Start- und Zielstation abrufen
         first_stop = stopovers[0]["stop"]
         last_stop = stopovers[-1]["stop"]
         
@@ -104,10 +104,13 @@ class Fetcher:
         
         if weather_start is None: weather_start = {}
         if weather_end is None: weather_end = {}
+        
+        # Anzahl Stopps berechnen 
+        num_stops = len(stopovers)
 
         content_rows = []
 
-        for stop in stopovers:
+        for i, stop in enumerate(stopovers):
             # Verspätung berechnen
             delay = stop.get("arrivalDelay")
             if delay is None:
@@ -132,12 +135,59 @@ class Fetcher:
                 "start_wind_speed": weather_start.get("wind_speed"),
                 "end_temp": weather_end.get("temperature"),
                 "end_precip": weather_end.get("precipitation"),
-                "end_wind_speed": weather_end.get("wind_speed")
+                "end_wind_speed": weather_end.get("wind_speed"),
+                "stops_total": num_stops,
+                "stop_index": i, 
+                "stops_remaining": num_stops - i - 1
             }
             content_rows.append(stop_data)
 
         return pd.DataFrame(content_rows)
 
+    def find_connection(self, start_station: str, end_station: str):
+        print(f"Suche Verbindung von {start_station} nach {end_station}...")
+        
+        start_id = self.get_station_id(start_station)
+        end_id = self.get_station_id(end_station)
+        
+        if not start_id or not end_id:
+            return None, "Konnte einen Bahnhof nicht finden."
+        
+        departures = self.stations_details(start_id)
+        if not departures:
+            return None, "keine Abfahrten am Startbahnhof gefunden."
+        
+        for i, departure in enumerate(departures[:10], start=1):
+            if "tripId" in departure:
+                trip_id = departure.get("tripId")
+                if not trip_id:
+                    continue
+                
+                trip_details = self.trip_details(trip_id)
+                if not trip_details:
+                    continue
+                
+                stops = trip_details.get("trip", {}).get("stopovers", [])
+                stop_names = [s["stop"]["name"] for s in stops]
+                
+                target_station = any(end_station.lower() in s.lower() for s in stop_names)
+                
+                if target_station:
+                    df = self.create_dataframe(trip_details, ride_id=i)
+                    
+                    if df.empty: 
+                        continue
+                    
+                    # Finde die Zeile für den Einstiegspunkt
+                    entry_row = df[df["current_station"].str.contains(start_station, case=False, na=False)]
+                    
+                    if not entry_row.empty:
+                        return entry_row.iloc[0] , None
+                    
+                    return df.iloc[0], None
+                
+        return None, "Keine direkte Verbindung in den nächsten 10 Abfahrten gefunden."
+                    
 
 # Ausführung im Hauptprogramm 
 if __name__ == "__main__":
@@ -165,6 +215,9 @@ if __name__ == "__main__":
                     print(f"Lade Trip {i}/{len(departures)}: {line_name}")
                     
                     trip_data = fetcher.trip_details(trip_id)
+                    
+                    df_trip = pd.DataFrame()
+                    
                     if trip_data is not None:
                         df_trip = fetcher.create_dataframe(trip_data, ride_id=i)
                     
