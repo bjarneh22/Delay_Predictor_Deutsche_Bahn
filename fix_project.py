@@ -1,4 +1,10 @@
-import requests
+import os
+
+# 1. Ordner sicherstellen
+os.makedirs("src/bjarne_api", exist_ok=True)
+
+# 2. Der Code für collector_for_app.py (OHNE collector Import)
+collector_code = """import requests
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
@@ -114,3 +120,18 @@ class Fetcher:
                 return df.iloc[0], None
                 
         return None, "Keine direkte Verbindung gefunden."
+"""
+
+# 3. Datei überschreiben
+file_path = "src/bjarne_api/collector_for_app.py"
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(collector_code)
+
+print(f"✅ Datei '{file_path}' wurde erfolgreich neu geschrieben!")
+print("   Der alte 'import collector' Fehler ist jetzt physikalisch unmöglich.")
+"""
+
+# 4. __init__.py sicherstellen (manchmal verursacht das Fehlen Fehler)
+with open("src/bjarne_api/__init__.py", "w") as f:
+    f.write("") # Leere Datei
+"""
