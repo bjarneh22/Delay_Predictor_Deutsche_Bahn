@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
-from collector import *
+from .collector import *
 
 class Fetcher:
     BASE_URL = "https://v6.db.transport.rest"
