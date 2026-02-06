@@ -124,9 +124,11 @@ class Fetcher:
         train_type = trip.get("line", {}).get("productName", "NA")
         
         num_stops = len(stopovers)
-        content_rows = []
-        
+        content_rows = []   
+
         for i, stop in enumerate(stopovers):
+            
+            # Wetterdaten für die aktuelle Station abrufen
             lat = stop.get("stop", {}).get("location", {}).get("latitude")
             lon = stop.get("stop", {}).get("location", {}).get("longitude")
             
@@ -136,9 +138,7 @@ class Fetcher:
                 
             if weather is None: 
                 weather = {}
-        
-
-        for i, stop in enumerate(stopovers):
+                
             # Verspätung berechnen
             delay = stop.get("arrivalDelay")
             if delay is None:
@@ -158,9 +158,9 @@ class Fetcher:
                 "planned_departure": stop.get("plannedDeparture"),
                 "actual_departure": stop.get("departure"),
                 "current_delay": delay_minutes,
-                "start_temp": weather.get("temperature"),
-                "start_precip": weather.get("precipitation"),
-                "start_wind_speed": weather.get("wind_speed"),
+                "temp": weather.get("temperature"),
+                "precip": weather.get("precipitation"),
+                "wind_speed": weather.get("wind_speed"),
                 "stops_total": num_stops,
                 "stop_index": i, 
                 "stops_remaining": num_stops - i - 1
