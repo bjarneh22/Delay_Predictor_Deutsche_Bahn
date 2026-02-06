@@ -2,7 +2,40 @@ import requests
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
-from collector import *
+
+# get weather information for a station 
+def get_weather(lat, lon):
+
+    # Store the url for the API 
+    url = "https://api.open-meteo.com/v1/forecast"
+
+    # Define the parameters for the call 
+    parameters = {
+        "latitude" : lat,
+        "longitude" : lon,
+        "current" : "temperature_2m,precipitation,wind_speed_10m"
+    }
+
+    # call the data from the source
+    try: 
+        response = requests.get(url, params=parameters)
+        data = response.json()
+
+        # get the current weather data for the latitude and longitude of a specific train 
+        current = data.get("current", {})
+
+        # store the weather info 
+        weather_info = {
+            "temperature" : current.get("temperature_2m"),
+            "precipitation" : current.get("precipitation"),
+            "wind_speed" : current.get("wind_speed_10m")
+        }
+
+        return weather_info
+    
+    except Exception as e:
+        print(f"Fehler beim Wetter: {e}")
+        return None
 
 class Fetcher:
     BASE_URL = "https://v6.db.transport.rest"
@@ -32,8 +65,8 @@ class Fetcher:
         
         # Abfrageparameter definieren
         parameters = {
-            "results": 150,       
-            "duration": 120,       
+            "results": 30,       
+            "duration": 60,       
             "suburban": "false",  
             "subway": "false",    
             "tram": "false",      
@@ -79,35 +112,33 @@ class Fetcher:
         trip = trip_data.get("trip", trip_data)
         stopovers = trip.get("stopovers", [])
 
+        # Start und Ziel basierend auf erster/letzter Station der Route
+        station_start = stopovers[0]["stop"]["name"]
+        station_end = stopovers[-1]["stop"]["name"]
+        
+        
         if not stopovers:
             return pd.DataFrame()
 
         train_name = trip.get("line", {}).get("name", "NA")
         train_type = trip.get("line", {}).get("productName", "NA")
         
-        # Start und Ziel basierend auf erster/letzter Station der Route
-        station_start = stopovers[0]["stop"]["name"]
-        station_end = stopovers[-1]["stop"]["name"]
-        
-        # Koordinaten von Start und Endbahnhof ermitteln
-        first_stop = stopovers[0]["stop"]
-        last_stop = stopovers[-1]["stop"]
-        
-        lat_start = first_stop.get("location", {}).get("latitude")
-        lon_start = first_stop.get("location", {}).get("longitude")
-        
-        lat_end = last_stop.get("location", {}).get("latitude")
-        lon_end = last_stop.get("location", {}).get("longitude")
-        
-        weather_start = get_weather(lat_start, lon_start) if lat_start and lon_start else None
-        weather_end = get_weather(lat_end, lon_end) if lat_end and lon_end else None
-        
-        if weather_start is None: weather_start = {}
-        if weather_end is None: weather_end = {}
+        num_stops = len(stopovers)
+        content_rows = []   
 
-        content_rows = []
-
-        for stop in stopovers:
+        for i, stop in enumerate(stopovers):
+            
+            # Wetterdaten für die aktuelle Station abrufen
+            lat = stop.get("stop", {}).get("location", {}).get("latitude")
+            lon = stop.get("stop", {}).get("location", {}).get("longitude")
+            
+            weather = {}
+            if lat and lon: 
+                weather = get_weather(lat, lon) or {}
+                
+            if weather is None: 
+                weather = {}
+                
             # Verspätung berechnen
             delay = stop.get("arrivalDelay")
             if delay is None:
@@ -121,23 +152,64 @@ class Fetcher:
                 "train_type": train_type,
                 "station_start": station_start,
                 "station_dest": station_end,
-                "current_station": stop["stop"]["name"],
-                "planned_arrival": stop.get("plannedArrival"),
-                "actual_arrival": stop.get("arrival"),
-                "planned_departure": stop.get("plannedDeparture"),
-                "actual_departure": stop.get("departure"),
+                "station_current": stop["stop"]["name"],
+                "arrival_planned": stop.get("plannedArrival"),
+                "arrival_real": stop.get("arrival"),
+                "departure_planned": stop.get("plannedDeparture"),
+                "departure_real": stop.get("departure"),
                 "current_delay": delay_minutes,
-                "start_temp": weather_start.get("temperature"),
-                "start_precip": weather_start.get("precipitation"),
-                "start_wind_speed": weather_start.get("wind_speed"),
-                "end_temp": weather_end.get("temperature"),
-                "end_precip": weather_end.get("precipitation"),
-                "end_wind_speed": weather_end.get("wind_speed")
+                "temp": weather.get("temperature"),
+                "precip": weather.get("precipitation"),
+                "wind_speed": weather.get("wind_speed"),
+                "stops_total": num_stops,
+                "stop_index": i, 
+                "stops_remaining": num_stops - i - 1
             }
             content_rows.append(stop_data)
 
         return pd.DataFrame(content_rows)
 
+    def find_connection(self, start_station: str, end_station: str):
+        print(f"Suche Verbindung von {start_station} nach {end_station}...")
+        
+        start_id = self.get_station_id(start_station)
+        end_id = self.get_station_id(end_station)
+        
+        if not start_id or not end_id:
+            return pd.DataFrame(), "Bahnhof nicht gefunden."
+        
+        departures = self.stations_details(start_id)
+        if not departures:
+            return pd.DataFrame(), "keine Abfahrten am Startbahnhof gefunden."
+        
+        connections = []
+        
+        for i, departure in enumerate(departures[:15], start=1):
+            if "tripId" in departure:
+                trip_id = departure.get("tripId")
+                if not trip_id: continue
+                
+                trip_details = self.trip_details(trip_id)
+                if not trip_details: continue
+                
+                stops = trip_details.get("trip", {}).get("stopovers", [])
+                stop_names = [s["stop"]["name"] for s in stops]
+                
+                if any(end_station.lower() in s.lower() for s in stop_names):
+                    df = self.create_dataframe(trip_details, ride_id=i)
+                    
+                    if df.empty: continue
+                        
+                    # Finde die Zeile für den Einstiegspunkt
+                    entry_row = df[df["current_station"].str.contains(start_station, case=False, na=False)]
+                    
+                    if not entry_row.empty:
+                        connections.append(entry_row.iloc[0])
+                    
+            if not connections:
+                return pd.DataFrame(), "Keine direkte Verbindung gefunden."
+                
+        return pd.DataFrame(connections), None
 
 # Ausführung im Hauptprogramm 
 if __name__ == "__main__":
@@ -165,6 +237,9 @@ if __name__ == "__main__":
                     print(f"Lade Trip {i}/{len(departures)}: {line_name}")
                     
                     trip_data = fetcher.trip_details(trip_id)
+                    
+                    df_trip = pd.DataFrame()
+                    
                     if trip_data is not None:
                         df_trip = fetcher.create_dataframe(trip_data, ride_id=i)
                     
