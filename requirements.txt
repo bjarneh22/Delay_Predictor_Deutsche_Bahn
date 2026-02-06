@@ -3,3 +3,7 @@ numpy
 matplotlib
 pandas
 streamlit
+holidays
+ipykernel
+duckdb
+scikit-learn
