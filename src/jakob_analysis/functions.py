@@ -1,3 +1,13 @@
+#########################
+# LIBRARIES
+#########################
+
+
+import pandas as pd
+import numpy as np
+import holidays
+from sklearn.preprocessing import FunctionTransformer
+
 
 #########################
 # FILTERING
@@ -14,7 +24,77 @@ def filter_train_type(df):
 #########################
 
 
-def create_features(df):
+def historic_delay_features(df):
+
+    # make correct date format
+    df["date"] = df["departure_real"].dt.floor("D")
+
+    # time-frames
+    min_lookback = pd.Timedelta("60D") # gap between current day and time_frame
+    lookback = pd.Timedelta("60D") # length of time_frame
+
+    # create list for historic features
+    hist_features = []
+
+    # extract names of stations in list
+    stations_list = df["station_current"].unique()
+
+    # loop over stations
+    for station in stations_list:
+
+        # get information for station (df and corresponding days)
+        df_station = df[df["station_current"] == station].sort_values("departure_real")
+
+        # only select stations that are not NA
+        df_station = df_station[df_station["date"].notna()]
+        if df_station.empty:
+            continue
+
+        dates = pd.date_range(df_station["date"].min(), df_station["date"].max())
+
+        # loop over days
+        for day in dates:
+
+            window_start = day - min_lookback - lookback
+            window_end = day - min_lookback
+
+            time_frame = (df_station["departure_real"] < window_end) & \
+                       (df_station["departure_real"] >= window_start)
+            
+            if df_station.loc[time_frame, "delay"].empty:
+                hist_avg = 0
+                hist_q90 = 0
+                hist_count = 0
+            else:
+                hist_avg = df_station.loc[time_frame, "delay"].mean()
+                hist_q90 = df_station.loc[time_frame, "delay"].quantile(0.9)
+                hist_count = df_station.loc[time_frame, "delay"].count()
+                
+
+
+            hist_features.append({
+                "station_current": station,
+                "date": day,
+                "hist_delay_avg": hist_avg,
+                "hist_delay_q90": hist_q90,
+                "hist_delay_count": hist_count
+                })
+        
+    hist_df = pd.DataFrame(hist_features)
+    return hist_df
+
+
+def create_features(df, historical):
+
+
+    ### PREPARATION
+
+    # define transformer
+    def sin_transformer(period):
+        return FunctionTransformer(lambda x: np.sin(x / period * 2 * np.pi))
+
+    def cos_transformer(period):
+        return FunctionTransformer(lambda x: np.cos(x / period * 2 * np.pi))
 
     # create copy: do not overwrite input df
     df = df.copy()
@@ -28,7 +108,8 @@ def create_features(df):
     df = df.sort_values(by=["ride_id", "departure_planned"])
 
 
-    ### RIDE RELATED 
+
+    ### RIDE RELATED ###
 
     # prepare grouping
     grouped = df.groupby("ride_id")
@@ -36,20 +117,30 @@ def create_features(df):
     # number of stops
     df["stops_total"] = grouped["station_current"].transform("count")
 
-    # time departure and arrival
+    # time departure and arrival (WILL BE DELETED LATER)
     df["departure_planned_start"] = grouped["departure_planned"].transform("first")
     df["arrival_planned_dest"] = grouped["arrival_planned"].transform("last")
 
     # travel time
     df["travel_time"] = (df["arrival_planned_dest"] - df["departure_planned_start"]).dt.total_seconds() / 60
 
-    # weekday and month
+    # weekday
     df["weekday"] = df["departure_planned_start"].dt.weekday
+    # FROM: https://scikit-learn.org/stable/auto_examples/applications/plot_cyclical_feature_engineering.html
+    df["weekday_sin"] = np.sin(2 * np.pi * df["weekday"] / 7)
+    df["weekday_cos"] = np.cos(2 * np.pi * df["weekday"] / 7)
+    df["weekend"] = (df["weekday"] >= 5).astype(int)
+
+    # month
     df["month"] = df["departure_planned_start"].dt.month
+    # FROM: https://scikit-learn.org/stable/auto_examples/applications/plot_cyclical_feature_engineering.html
+    df["month_sin"] = np.sin(2 * np.pi * (df["month"] - 1) / 12)
+    df["month_cos"] = np.cos(2 * np.pi * (df["month"] - 1) / 12)
 
     # feast
     de_holidays = holidays.Germany()
     df["feast"] = df["departure_planned_start"].dt.date.apply(lambda x: x in de_holidays)
+
 
 
     ### STATION RELATED
@@ -60,17 +151,22 @@ def create_features(df):
         df["departure_real"].dt.hour, 
         df["arrival_real"].dt.hour)
     
+    # FROM: https://scikit-learn.org/stable/auto_examples/applications/plot_cyclical_feature_engineering.html
+    df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
+    df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
+    
     # dwell-time planned
     df["dwell_time_planned"] = (df["departure_planned"] - df["arrival_planned"]).dt.total_seconds() / 60
     df["dwell_time_planned"] = df["dwell_time_planned"].fillna(0) # for start and destination stations
+
 
 
     ### SEQUENCE RELATED
 
     # station role: start, mid, end
     conditions = [
-        (df["station_current"] == df["station_start"]), # Bedingung für 'start'
-        (df["station_current"] == df["station_dest"])   # Bedingung für 'end'
+        (df["station_current"] == df["station_start"]),
+        (df["station_current"] == df["station_dest"])
         ]
     choices = ["start", "end"]
     df["station_role"] = np.select(conditions, choices, default = "mid") 
@@ -85,6 +181,49 @@ def create_features(df):
 
     # share ride time
     df["share_ride_time"] = (df["time_since_start_planned"] / df["travel_time"])
+
+
+
+    ### WEATHER
+
+    # precipitation
+    df["precipitation_any"] = (df["precipitation"] > 0).astype(int)
+    df["precipitation_log"] = np.log1p(df["precipitation"])
+
+
+
+    ### HISTORICAL
+
+    if historical == True:
+
+        # merge the results
+        df = df.merge(
+            hist_df,
+            on = ["station_current", "date"],
+            how = "left"
+            )
+    else: 
+        df = df.merge(
+            hist_delay_lookup,
+            on = ["station_current"],
+            how = "left"
+        )    
+    
+
+
+    ### FINAL TRANSFORMATIONS AND SELECTION
+
+    # transform time departure and arrival (datetime to hour)
+    df["departure_planned_start"] = df["departure_planned_start"].dt.hour
+    df["departure_rush_morning"] = df["departure_planned_start"].between(6, 9).astype(int)
+    df["departure_rush_evening"] = df["departure_planned_start"].between(15, 18).astype(int)
+    
+
+    df = df.drop(columns = ["weekday", "month", "hour", 
+                            "precipitation", 
+                            "departure_planned_start", "arrival_planned_dest",
+                            "date"])
+
 
     return df
 
@@ -144,3 +283,20 @@ def get_connections(df, station_start, station_dest):
     else:
         print(f"No current connections found.")
         return None
+    
+
+
+#########################
+# ML-MODEL
+#########################
+
+### FUNCTION THAT SPLITS FEATURES AND TARGET
+def choose_features_target(df):
+    X = df[["station_current", "train_name", "train_type", "station_start", "station_dest",
+        "travel_time", "hour", "weekday", "month", "feast", "dwell_time_planned",
+        "station_role", "stop_index", "time_since_start_planned", "share_ride_time", 
+        "departure_planned_start", "arrival_planned_dest",
+        "temperature", "precipitation", "wind_speed"]]
+    y = df[["delay"]]
+
+    return X, y

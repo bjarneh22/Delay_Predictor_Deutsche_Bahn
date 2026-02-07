@@ -4,6 +4,8 @@ import time
 import sys 
 import os 
 
+### !!! CHECK IF REQUIREMENTS.TXT LOADED 
+
 # Import Fetcher Klasse 
 try: 
     from src.bjarne_api.collector_new import Fetcher
