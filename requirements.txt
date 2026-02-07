@@ -7,3 +7,5 @@ holidays
 ipykernel
 duckdb
 scikit-learn
+nbformat
+seaborn

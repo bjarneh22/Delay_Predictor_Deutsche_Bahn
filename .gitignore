@@ -15,6 +15,7 @@ env/
 data/*.csv
 data/*.json
 data/*.duckdb
+data/train_delay_cleaned.parquet
 data/parquet/
 !data/.gitkeep  # Aber die .gitkeep Datei behalten wir!
 
