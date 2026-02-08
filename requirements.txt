@@ -9,3 +9,4 @@ duckdb
 scikit-learn
 nbformat
 seaborn
+statsmodels

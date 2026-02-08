@@ -84,7 +84,7 @@ def historic_delay_features(df):
     return hist_df
 
 
-def create_features(df, historical):
+def create_features(df, api, historical_features):
 
 
     ### PREPARATION
@@ -194,17 +194,21 @@ def create_features(df, historical):
 
     ### HISTORICAL
 
-    if historical == True:
+    # check if function is applied for historical data or api data
+    if api == False:
 
-        # merge the results
+        # merge by station_current and date
         df = df.merge(
-            hist_df,
+            historical_features,
             on = ["station_current", "date"],
             how = "left"
             )
     else: 
+
+        # if api data: merge only by station_current 
+        # (in lookup file only one row per station)
         df = df.merge(
-            hist_delay_lookup,
+            historical_features,
             on = ["station_current"],
             how = "left"
         )    
@@ -292,11 +296,12 @@ def get_connections(df, station_start, station_dest):
 
 ### FUNCTION THAT SPLITS FEATURES AND TARGET
 def choose_features_target(df):
-    X = df[["station_current", "train_name", "train_type", "station_start", "station_dest",
-        "travel_time", "hour", "weekday", "month", "feast", "dwell_time_planned",
-        "station_role", "stop_index", "time_since_start_planned", "share_ride_time", 
-        "departure_planned_start", "arrival_planned_dest",
-        "temperature", "precipitation", "wind_speed"]]
-    y = df[["delay"]]
+
+    cols_exclude = ["ride_id", "delay", "departure_real",
+                    "arrival_real", "departure_planned", "arrival_planned"]
+    
+    feature_cols = [col for col in df.columns if col not in cols_exclude]
+    X = df[feature_cols]
+    y = df["delay"]
 
     return X, y
