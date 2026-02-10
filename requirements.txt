@@ -10,3 +10,4 @@ scikit-learn
 nbformat
 seaborn
 statsmodels
+sklearn-quantile
