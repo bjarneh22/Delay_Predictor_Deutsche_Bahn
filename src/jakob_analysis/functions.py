@@ -24,9 +24,11 @@ def filter_train_type(df):
 #########################
 
 
-def historic_delay_features(df):
+
+def historic_delay_features(df, variable, prefix):
 
     # make correct date format
+    ## for train_name: date not needed because ride_id is used
     df["date"] = df["departure_real"].dt.floor("D")
 
     # time-frames
@@ -36,52 +38,75 @@ def historic_delay_features(df):
     # create list for historic features
     hist_features = []
 
-    # extract names of stations in list
-    stations_list = df["station_current"].unique()
 
-    # loop over stations
-    for station in stations_list:
+    # loop over variable (either station or train_name)
+    for var in df[variable].dropna().unique():
 
-        # get information for station (df and corresponding days)
-        df_station = df[df["station_current"] == station].sort_values("departure_real")
-
-        # only select stations that are not NA
-        df_station = df_station[df_station["date"].notna()]
-        if df_station.empty:
+        # get information for variable (df and corresponding days)
+        df_variable = df[df[variable] == var].sort_values("departure_real")
+        df_variable = df_variable.dropna(subset=["date"])
+        
+        if df_variable.empty:
             continue
 
-        dates = pd.date_range(df_station["date"].min(), df_station["date"].max())
+        ### TRAIN-NAME
+        # here: we consider ride_id as critical variable and want to have one calculation per ride_id
 
-        # loop over days
-        for day in dates:
-
-            window_start = day - min_lookback - lookback
-            window_end = day - min_lookback
-
-            time_frame = (df_station["departure_real"] < window_end) & \
-                       (df_station["departure_real"] >= window_start)
+        if variable == "train_name":
             
-            if df_station.loc[time_frame, "delay"].empty:
-                hist_avg = 0
-                hist_q90 = 0
-                hist_count = 0
-            else:
-                hist_avg = df_station.loc[time_frame, "delay"].mean()
-                hist_q90 = df_station.loc[time_frame, "delay"].quantile(0.9)
-                hist_count = df_station.loc[time_frame, "delay"].count()
+            # loop over rides
+            for ride in df_variable["ride_id"].dropna().unique():
                 
+                # information for this ride_id: used to get date
+                df_ride = df_variable[df_variable["ride_id"] == ride]
 
+                # Zeitfenster auf departure_real bezogen
+                window_start = df_ride["departure_real"].min() - min_lookback - lookback
+                window_end = df_ride["departure_real"].min() - min_lookback
 
-            hist_features.append({
-                "station_current": station,
-                "date": day,
-                "hist_delay_avg": hist_avg,
-                "hist_delay_q90": hist_q90,
-                "hist_delay_count": hist_count
+                time_frame = (df_variable["departure_real"] < window_end) & \
+                       (df_variable["departure_real"] >= window_start)
+                delays = df_variable.loc[time_frame, "delay"]
+
+                hist_features.append({
+                    variable: var,
+                    "ride_id": ride,
+                    f"{prefix}_avg": delays.mean() if not delays.empty else 0.0,
+                    f"{prefix}_q90": delays.quantile(0.9) if not delays.empty else 0.0,
+                    f"{prefix}_count": delays.count(),
                 })
-        
-    hist_df = pd.DataFrame(hist_features)
-    return hist_df
+
+
+        ### STATION
+        # here: we consider day as critical variable and want to have one calculation per day 
+
+        else:
+            
+            dates = pd.date_range(df_variable["date"].min(), df_variable["date"].max())
+            
+            # loop over days
+            for day in dates:
+
+                window_start = day - min_lookback - lookback
+                window_end = day - min_lookback
+
+                time_frame = (df_variable["departure_real"] < window_end) & \
+                       (df_variable["departure_real"] >= window_start)
+                delays = df_variable.loc[time_frame, "delay"]
+
+                hist_features.append({
+                    variable: var,
+                    "date": day,
+                    f"{prefix}_avg": delays.mean() if not delays.empty else 0.0,
+                    f"{prefix}_q90": delays.quantile(0.9) if not delays.empty else 0.0,
+                    f"{prefix}_count": delays.count(),
+                })
+    
+   
+    return pd.DataFrame(hist_features)
+
+
+
 
 
 def create_features(df, api, historical_features):
@@ -197,21 +222,41 @@ def create_features(df, api, historical_features):
     # check if function is applied for historical data or api data
     if api == False:
 
-        # merge by station_current and date
+        # merge by station_current/train_name and date 
         df = df.merge(
-            historical_features,
+            historical_features[0],
             on = ["station_current", "date"],
-            how = "left"
-            )
+            how = "left")
+        
+        df = df.merge(
+            historical_features[1],
+            on = ["train_name", "ride_id"],
+            how = "left")
+        
+        # fill NA values with 0 (works because "count" gets a 0 too)
+        hist_cols = [
+            "hist_delay_station_avg",
+            "hist_delay_station_q90",
+            "hist_delay_station_count",
+            "hist_delay_train_avg",
+            "hist_delay_train_q90",
+            "hist_delay_train_count"]
+        df[hist_cols] = df[hist_cols].fillna(0)
+
     else: 
 
-        # if api data: merge only by station_current 
-        # (in lookup file only one row per station)
+        # if api data: merge only by station_current/train_name
+        # (in lookup file only one row per station/train)
+
         df = df.merge(
-            historical_features,
+            historical_features[0],
             on = ["station_current"],
-            how = "left"
-        )    
+            how = "left")
+        
+        df = df.merge(
+            historical_features[1],
+            on = ["train_name"],
+            how = "left")
     
 
 
@@ -297,8 +342,12 @@ def get_connections(df, station_start, station_dest):
 ### FUNCTION THAT SPLITS FEATURES AND TARGET
 def choose_features_target(df):
 
-    cols_exclude = ["ride_id", "delay", "departure_real",
-                    "arrival_real", "departure_planned", "arrival_planned"]
+    cols_exclude = ["ride_id", # id
+                    "delay", # target
+                    "departure_real","arrival_real", "departure_planned", "arrival_planned", # raw time variables
+                    "train_name", "station_current", "station_start", "station_dest", # high-dimensional categories 
+                    "hist_delay_train_q90", "hist_delay_station_q90", "stops_total", "stop_index", "share_ride_time" # discarded after correlation analysis
+                    ]
     
     feature_cols = [col for col in df.columns if col not in cols_exclude]
     X = df[feature_cols]
