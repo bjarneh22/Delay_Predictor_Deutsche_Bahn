@@ -339,18 +339,3 @@ def get_connections(df, station_start, station_dest):
 # ML-MODEL
 #########################
 
-### FUNCTION THAT SPLITS FEATURES AND TARGET
-def choose_features_target(df):
-
-    cols_exclude = ["ride_id", # id
-                    "delay", # target
-                    "departure_real","arrival_real", "departure_planned", "arrival_planned", # raw time variables
-                    "train_name", "station_current", "station_start", "station_dest", # high-dimensional categories 
-                    "hist_delay_train_q90", "hist_delay_station_q90", "stops_total", "stop_index", "share_ride_time" # discarded after correlation analysis
-                    ]
-    
-    feature_cols = [col for col in df.columns if col not in cols_exclude]
-    X = df[feature_cols]
-    y = df["delay"]
-
-    return X, y
