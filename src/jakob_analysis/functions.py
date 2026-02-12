@@ -13,10 +13,7 @@ from sklearn.preprocessing import FunctionTransformer
 # FILTERING
 #########################
 
-### FILTER FUNCTION FOR ICE/IC TRAINS ONLY ###
-def filter_train_type(df):
-    output_df = df[df["train_type"].str.contains("ICE|IC", case=False, na=False)].copy()
-    return output_df
+
 
 
 #########################
@@ -114,15 +111,6 @@ def create_features(df, api, historical_features):
 
     ### PREPARATION
 
-    # define transformer
-    def sin_transformer(period):
-        return FunctionTransformer(lambda x: np.sin(x / period * 2 * np.pi))
-
-    def cos_transformer(period):
-        return FunctionTransformer(lambda x: np.cos(x / period * 2 * np.pi))
-
-    # create copy: do not overwrite input df
-    df = df.copy()
 
     # check that all date variables have the correct format
     datetime_cols = ["departure_planned", "arrival_planned", "departure_real", "arrival_real"]
@@ -270,8 +258,9 @@ def create_features(df, api, historical_features):
 
     df = df.drop(columns = ["weekday", "month", "hour", 
                             "precipitation", 
-                            "departure_planned_start", "arrival_planned_dest",
-                            "date"])
+                            "departure_planned_start", "arrival_planned_dest"
+                            # "date"
+                            ])
 
 
     return df
@@ -283,6 +272,10 @@ def create_features(df, api, historical_features):
 
 ### FUNCTION TO FIND POSSIBLE DESTINATIONS FROM A GIVEN STATION ###
 def get_possible_destinations(df, station_name):
+
+    # filter only ICE and IC 
+    df = df[df["train_type"].str.contains("ICE|IC", case=False, na=False)]
+
     possible_destinations = []
 
     for ride_id, train_group in df.groupby("ride_id"):
