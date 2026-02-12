@@ -7,3 +7,7 @@ holidays
 ipykernel
 duckdb
 scikit-learn
+nbformat
+seaborn
+statsmodels
+sklearn-quantile
