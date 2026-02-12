@@ -1,4 +1,5 @@
-import requests
+import requests 
+from requests.exceptions import HTTPError
 import pandas as pd
 import urllib.parse
 from typing import Optional, Dict, Any, List
@@ -40,7 +41,6 @@ def get_weather(lat, lon):
 class Fetcher:
     BASE_URL = "https://v6.db.transport.rest"
 
-    # Initialisiere die Klasse
     def __init__(self):
         self.session = requests.Session()
 
@@ -55,6 +55,12 @@ class Fetcher:
             data = response.json()
             if data:
                 return data[0]["id"]
+            else: 
+                print(f"Die Eingebene Station {station_name} existiert nicht")
+                
+        except HTTPError as http_err:
+            print(f"Fehler bei der Suche nach {station_name} - {http_err}. Gibt es den eingegebenen Bahnhof wirklich?")
+        
         except Exception as e:
             print(f"Fehler beim Abrufen der Stations-ID: {e}")
             return None
@@ -82,10 +88,12 @@ class Fetcher:
             data = response.json()
             
             # Falls keine Abfahrten vorhanden, gebe leere Liste aus
-            if data and "departures" in data:
+            if data and "departures" in data and len(data["departures"])>0:
                 return data["departures"]
-            return []
-            
+            else:
+                print(f"Für den Bahnhof {station_id} gibt es aktuell keine Abfahrten")
+                return []
+        
         except Exception as e:
             print(f"Fehler beim Abrufen der Stationsdetails: {e}")
             return []
@@ -214,7 +222,7 @@ class Fetcher:
 # Ausführung im Hauptprogramm 
 if __name__ == "__main__":
     fetcher = Fetcher()
-    station_name = "Berlin Hbf" 
+    station_name = "Aachen Hbf" 
     
     print(f"Suche Station ID für {station_name}...")
     station_id = fetcher.get_station_id(station_name)
@@ -247,7 +255,7 @@ if __name__ == "__main__":
                         all_trips_dfs.append(df_trip)
                         
                     else: 
-                        print(f"Details für Trip {line_name} konnten nicht verarbeitete werden")
+                        pass
             
             # Zusammenfügen aller DataFrames
             if all_trips_dfs:
