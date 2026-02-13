@@ -1,5 +1,6 @@
 import streamlit as st 
 import pandas as pd 
+from pathlib import Path
 import time 
 import sys 
 import os 
@@ -20,15 +21,32 @@ except ImportError:
 # Import txt info file für modelle
 
 # import historical_delay_lookups
+try:
+    BASE_DIR = Path(__file__).resolve().parent
+    file_path = BASE_DIR / "data" / "hist_delay_station_lookup.parquet"
     
+    df = pd.read_parquet(file_path)
+
+except FileNotFoundError as e:
+    st.error(f"File not found: {e}")
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading parquet file: {e}")
+    st.stop()
+
+
+# create the train_stations as a ordered vector
+train_stations = sorted(df["station_current"].unique())
+
+
 # Import Modell 
 # BITTE models.py MIT DEM MODELL ERSTELLEN!!! 
 try:
-    from.src.jakob_analysis.functions import * 
+    from src.jakob_analysis.functions import * 
 except ImportError: 
     sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
     try:
-        from.src.jakob_analysis.functions import * 
+        from src.jakob_analysis.functions import * 
     except ImportError as e:
         st.error(f"Fehler beim Import: {e}")
         st.stop()
@@ -38,10 +56,9 @@ st.set_page_config(page_title="Bahn Delay Predictor", page_icon="🚆")
 # Streamlit Layout   
 st.title("🚆 Bahn Delay Predictor")
 
-# Eingabefelder für Bahnhöfe und Ticketpres 
+# Eingabefeld für Startbahnhof
 with st.container(border=True):
-    c1 = st.columns(1)
-    start_station = c1.selectbox("Startbahnhof", "Berlin Hbf")
+    start_station = st.selectbox("Startbahnhof", options = [""] + train_stations, index = 0)
     
 # Ergebnisse im Session State speichern
 if "connections" not in st.session_state:
@@ -66,6 +83,9 @@ if "connections" not in st.session_state:
     # ---- get possible destinations (2) --- 
 
     # ---- Selectbox mit output von davor (3) --- 
+    with st.container(border=True):
+        end_station_possible = None
+        end_station = st.selectbox("Zielbahnhof", options = [""] + end_station_possible, index = 0)
 
     # end_station als
     end_station = None # Hier output von vorherigem Schritt (3) und eigener Container
@@ -76,7 +96,7 @@ if "connections" not in st.session_state:
     
     search_btn = st.button("Verbindungen suchen", type="primary")
     
-    if search_btn:
+    # if search_btn:
         # --- DATA WRANGLING FÜR ML INPUT ---
         #----- select possible connections mit get_connections ---
         # --- erstelle df für die select box
@@ -110,7 +130,7 @@ if st.session_state.connections is not None and not st.session_state.connections
         # --- PREDICTION ---
     
     
-
+'''
 
 if st.session_state.connections is not None and not st.session_state.connections.empty:
     # Risiko berechnen 
@@ -132,4 +152,4 @@ if st.session_state.connections is not None and not st.session_state.connections
         refund_col2.write(f"Ab 120 min: **{ticket_price*0.50:.2f} €**")
         
 #----- BUTTON: EXPORT TXT-File
-# --- Info: prediction und infos vom model ---
+# --- Info: prediction und infos vom model ---'''
