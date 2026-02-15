@@ -1,3 +1,13 @@
+'''
+This module contains the functions to collect the data for the project. It includes the following functions:
+- get_station_details: to get the station id and location for a given station name
+- get_journeys: to get the journeys between a start and end station with the relevant features for the ML model
+- get_weather: to get the current weather information for a given location
+- get_historical_weather: to get the historical weather information for a given location and date
+
+Author: Member 2 (Student ID: 25268915)
+'''
+
 # import the relevant packages for the API Call
 import requests
 import pandas as pd
