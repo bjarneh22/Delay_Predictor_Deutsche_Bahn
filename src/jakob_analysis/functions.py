@@ -2,7 +2,6 @@
 # LIBRARIES
 #########################
 
-
 import pandas as pd
 import numpy as np
 import holidays
@@ -15,7 +14,7 @@ from sklearn.preprocessing import FunctionTransformer
 #########################
 
 
-
+### CREATE HISTORICAL DELAY FEATURES ### 
 def historic_delay_features(df, variable, prefix):
 
     # make correct date format
@@ -40,6 +39,7 @@ def historic_delay_features(df, variable, prefix):
         if df_variable.empty:
             continue
 
+
         ### TRAIN-NAME
         # here: we consider ride_id as critical variable and want to have one calculation per ride_id
 
@@ -51,14 +51,19 @@ def historic_delay_features(df, variable, prefix):
                 # information for this ride_id: used to get date
                 df_ride = df_variable[df_variable["ride_id"] == ride]
 
-                # Zeitfenster auf departure_real bezogen
+                # get time frame
+                ## get start and end points
                 window_start = df_ride["departure_real"].min() - min_lookback - lookback
                 window_end = df_ride["departure_real"].min() - min_lookback
-
+                ## create time_frame (TRUE/FALSE mask)
                 time_frame = (df_variable["departure_real"] < window_end) & \
                        (df_variable["departure_real"] >= window_start)
+                
+                # get delays for the given time_frame (rows - time_frame == T, cols == delay)
                 delays = df_variable.loc[time_frame, "delay"]
 
+                # create historical features (aggregate)
+                ## if is empty: set 0 (not distorting because count is 0 as well)
                 hist_features.append({
                     variable: var,
                     "ride_id": ride,
@@ -73,18 +78,22 @@ def historic_delay_features(df, variable, prefix):
 
         else:
             
-            dates = pd.date_range(df_variable["date"].min(), df_variable["date"].max())
-            
             # loop over days
-            for day in dates:
+            for day in pd.date_range(df_variable["date"].min(), df_variable["date"].max()):
 
+                # get time frame
+                ## get start and end points
                 window_start = day - min_lookback - lookback
                 window_end = day - min_lookback
-
+                ## create time_frame (TRUE/FALSE mask)
                 time_frame = (df_variable["departure_real"] < window_end) & \
                        (df_variable["departure_real"] >= window_start)
+                
+                # get delays for the given time_frame (rows - time_frame == T, cols == delay)
                 delays = df_variable.loc[time_frame, "delay"]
 
+                # create historical features (aggregate)
+                ## if is empty: set 0 (not distorting because count is 0 as well)
                 hist_features.append({
                     variable: var,
                     "date": day,
@@ -98,9 +107,153 @@ def historic_delay_features(df, variable, prefix):
 
 
 
+### CREATE FEATURES FOR HISTORICAL DATA ### 
+# all features are created and historical features are added
+def create_features_historical(df, historical_features):
 
 
-def create_features(df, api, historical_features):
+    ### PREPARATION
+
+    # check that all date variables have the correct format
+    datetime_cols = ["departure_planned", "arrival_planned", "departure_real", "arrival_real"]
+    for col in datetime_cols:
+        df[col] = pd.to_datetime(df[col])
+
+    # arrange dataset again to guarantee correct feature creation
+    df = df.sort_values(by=["ride_id", "departure_planned"])
+
+
+
+    ### RIDE RELATED ###
+
+    # prepare grouping
+    grouped = df.groupby("ride_id")
+
+    # number of stops
+    df["stops_total"] = grouped["station_current"].transform("count")
+
+    # time departure and arrival (WILL BE DELETED LATER)
+    df["departure_planned_start"] = grouped["departure_planned"].transform("first")
+    df["arrival_planned_dest"] = grouped["arrival_planned"].transform("last")
+
+    # travel time
+    df["travel_time"] = (df["arrival_planned_dest"] - df["departure_planned_start"]).dt.total_seconds() / 60
+
+    # weekday
+    df["weekday"] = df["departure_planned_start"].dt.weekday
+    # FROM: https://scikit-learn.org/stable/auto_examples/applications/plot_cyclical_feature_engineering.html
+    df["weekday_sin"] = np.sin(2 * np.pi * df["weekday"] / 7)
+    df["weekday_cos"] = np.cos(2 * np.pi * df["weekday"] / 7)
+    df["weekend"] = (df["weekday"] >= 5).astype(int)
+
+    # month
+    df["month"] = df["departure_planned_start"].dt.month
+    # FROM: https://scikit-learn.org/stable/auto_examples/applications/plot_cyclical_feature_engineering.html
+    df["month_sin"] = np.sin(2 * np.pi * (df["month"] - 1) / 12)
+    df["month_cos"] = np.cos(2 * np.pi * (df["month"] - 1) / 12)
+
+    # feast
+    de_holidays = holidays.Germany()
+    df["feast"] = df["departure_planned_start"].dt.date.apply(lambda x: x in de_holidays)
+
+
+
+    ### STATION RELATED
+
+    # hour
+    df["hour"] = np.where(
+        df["departure_real"].notna(), 
+        df["departure_real"].dt.hour, 
+        df["arrival_real"].dt.hour)
+    # FROM: https://scikit-learn.org/stable/auto_examples/applications/plot_cyclical_feature_engineering.html
+    df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
+    df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
+    
+    # dwell-time planned
+    df["dwell_time_planned"] = (df["departure_planned"] - df["arrival_planned"]).dt.total_seconds() / 60
+    ## fill NA with 0 (for start and destination stations)
+    df["dwell_time_planned"] = df["dwell_time_planned"].fillna(0) 
+
+
+
+    ### SEQUENCE RELATED
+
+    # station role: start, mid, end
+    conditions = [(df["station_current"] == df["station_start"]), (df["station_current"] == df["station_dest"])]
+    choices = ["start", "end"]
+    df["station_role"] = np.select(conditions, choices, default = "mid") 
+
+    # stops index in journey
+    df["stop_index"] = grouped.cumcount() + 1 
+    
+    # time since start planned
+    df["time_since_start_planned"] = (
+        df["arrival_planned"] - df["departure_planned_start"]).dt.total_seconds() / 60
+    ## fill NA with 0 (for start stations)
+    df["time_since_start_planned"] = df["time_since_start_planned"].fillna(0) 
+
+    # share ride time
+    df["share_ride_time"] = (df["time_since_start_planned"] / df["travel_time"])
+
+
+
+    ### WEATHER
+
+    # precipitation
+    df["precipitation_any"] = (df["precipitation"] > 0).astype(int)
+    df["precipitation_log"] = np.log1p(df["precipitation"])
+
+
+
+    ### HISTORICAL
+    
+
+    # merge by station_current/train_name and date 
+    df = df.merge(
+        historical_features[0],
+        on = ["station_current", "date"],
+        how = "left")
+    df = df.merge(
+        historical_features[1],
+        on = ["train_name", "ride_id"],
+        how = "left")
+        
+    # fill NA values with 0 (works because "count" gets a 0 too)
+    hist_cols = [
+        "hist_delay_station_avg",
+        "hist_delay_station_q90",
+        "hist_delay_station_count",
+        "hist_delay_train_avg",
+        "hist_delay_train_q90",
+        "hist_delay_train_count"]
+    df[hist_cols] = df[hist_cols].fillna(0)
+
+    
+
+
+    ### FINAL TRANSFORMATIONS AND SELECTION
+
+    # transform time departure and arrival (datetime to hour)
+    df["departure_planned_start"] = df["departure_planned_start"].dt.hour
+    df["departure_rush_morning"] = df["departure_planned_start"].between(6, 9).astype(int)
+    df["departure_rush_evening"] = df["departure_planned_start"].between(15, 18).astype(int)
+    
+
+    df = df.drop(columns = ["weekday", "month", "hour", # cos/sin versions used
+                            "precipitation", # binary and log version used 
+                            "departure_planned_start", "arrival_planned_dest", # departure_rush version used
+                            "date" # was only a helper
+                            ])
+
+
+    return df
+
+
+
+
+### CREATE FEATURES FOR API DATA ### 
+# only the necessary features are created and historical features are added
+def create_features_api(df, historical_features):
 
 
     ### PREPARATION
@@ -120,9 +273,6 @@ def create_features(df, api, historical_features):
 
     # prepare grouping
     grouped = df.groupby("ride_id")
-
-    # number of stops
-    df["stops_total"] = grouped["station_current"].transform("count")
 
     # time departure and arrival (WILL BE DELETED LATER)
     df["departure_planned_start"] = grouped["departure_planned"].transform("first")
@@ -177,17 +327,11 @@ def create_features(df, api, historical_features):
         ]
     choices = ["start", "end"]
     df["station_role"] = np.select(conditions, choices, default = "mid") 
-
-    # stops index in journey
-    df["stop_index"] = grouped.cumcount() + 1 
     
     # time since start planned
     df["time_since_start_planned"] = (
         df["arrival_planned"] - df["departure_planned_start"]).dt.total_seconds() / 60
     df["time_since_start_planned"] = df["time_since_start_planned"].fillna(0) # for start stations
-
-    # share ride time
-    df["share_ride_time"] = (df["time_since_start_planned"] / df["travel_time"])
 
 
 
@@ -201,44 +345,18 @@ def create_features(df, api, historical_features):
 
     ### HISTORICAL
 
-    # check if function is applied for historical data or api data
-    if api == False:
+    # merge only by station_current or train_name
+    # (in lookup file only one row per station/train)
 
-        # merge by station_current/train_name and date 
-        df = df.merge(
-            historical_features[0],
-            on = ["station_current", "date"],
-            how = "left")
-        
-        df = df.merge(
-            historical_features[1],
-            on = ["train_name", "ride_id"],
-            how = "left")
-        
-        # fill NA values with 0 (works because "count" gets a 0 too)
-        hist_cols = [
-            "hist_delay_station_avg",
-            "hist_delay_station_q90",
-            "hist_delay_station_count",
-            "hist_delay_train_avg",
-            "hist_delay_train_q90",
-            "hist_delay_train_count"]
-        df[hist_cols] = df[hist_cols].fillna(0)
-
-    else: 
-
-        # if api data: merge only by station_current/train_name
-        # (in lookup file only one row per station/train)
-
-        df = df.merge(
-            historical_features[0],
-            on = ["station_current"],
-            how = "left")
-        
-        df = df.merge(
-            historical_features[1],
-            on = ["train_name"],
-            how = "left")
+    df = df.merge(
+        historical_features[0],
+        on = ["station_current"],
+        how = "left")
+    
+    df = df.merge(
+        historical_features[1],
+        on = ["train_name"],
+        how = "left")
     
 
 
@@ -250,21 +368,26 @@ def create_features(df, api, historical_features):
     df["departure_rush_evening"] = df["departure_planned_start"].between(15, 18).astype(int)
     
 
-    df = df.drop(columns = ["weekday", "month", "hour", 
-                            "precipitation", 
-                            "departure_planned_start", "arrival_planned_dest"
-                            # "date"
-                            ])
+    final_cols = [
+        "train_type", "temperature", "wind_speed", "travel_time",
+        "weekday_sin", "weekday_cos", "weekend", "month_sin", "month_cos",
+        "feast", "hour_sin", "hour_cos", "dwell_time_planned", "station_role",
+        "time_since_start_planned", "precipitation_any", "precipitation_log",
+        "hist_delay_station_avg", "hist_delay_station_count",
+        "hist_delay_train_avg", "hist_delay_train_count",
+        "departure_rush_morning", "departure_rush_evening"
+    ]
+
+    return df[final_cols]
 
 
-    return df
 
 
 #########################
 # CLEAN API DATA
 #########################
 
-### FUNCTION TO FIND POSSIBLE DESTINATIONS FROM A GIVEN STATION ###
+### FIND POSSIBLE DESTINATIONS FROM A GIVEN STATION ###
 def get_possible_destinations(df, station_name):
 
     # filter only ICE and IC 
@@ -292,8 +415,7 @@ def get_possible_destinations(df, station_name):
     return sorted(list(set(possible_destinations)))
 
 
-
-### FUNCTION TO GET CONNECTION BETWEEN TWO STATIONS ###
+### GET CONNECTIONS BETWEEN TWO STATIONS ###
 def get_connections(df, station_start, station_dest):
     
     suited_rides = []
@@ -319,10 +441,3 @@ def get_connections(df, station_start, station_dest):
     else:
         print(f"No current connections found.")
         return None
-    
-
-
-#########################
-# ML-MODEL
-#########################
-
