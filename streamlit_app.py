@@ -65,11 +65,22 @@ if "models_loaded" not in st.session_state:
     try:
         file_path_mean = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_mean.pkl"
         file_path_q05 = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_q05.pkl"
-        file_path_q95 = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_95.pkl"
+        file_path_q95 = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_95.pkl" # CHANGE NAME
 
         st.session_state.pipe_mean = joblib.load(file_path_mean)
         st.session_state.pipe_q05 = joblib.load(file_path_q05)
         st.session_state.pipe_q95 = joblib.load(file_path_q95)
+
+        # get model information
+        hgb_step = st.session_state.pipe_mean.named_steps['histgradientboostingregressor']
+        
+        # store as formatted string for export (TXT)
+        st.session_state.model_info_text = (
+            f"Model Type: HistGradientBoostingRegressor\n"
+            f"- Learning Rate: {hgb_step.learning_rate}\n"
+            f"- Max Iterations: {hgb_step.max_iter}\n"
+            f"- Max Leaf Nodes: {hgb_step.max_leaf_nodes}\n"
+            f"- Min Samples Leaf: {hgb_step.min_samples_leaf}")
 
         st.session_state.models_loaded = True
 
@@ -92,11 +103,6 @@ if "stations_list" not in st.session_state:
     except Exception as e:
         st.error(f"Error loading models: {e}")
         st.stop()
-
-
-# import txt info file for the models
-# HAS TO BE ADDED
-
 
 
 ### INIT SESSION STATE ###
@@ -211,7 +217,7 @@ if st.session_state.connections is not None:
         f"🚆 {x['train_name']} | "
         f"Dep: {pd.to_datetime(x['departure_planned']).strftime('%H:%M') if pd.notnull(x['departure_planned']) else '??:??'} → "
         f"Arr: {pd.to_datetime(arrivals.get(x['train_name'])).strftime('%H:%M') if pd.notnull(arrivals.get(x['train_name'])) else '??:??'} | "
-        f"Delay: +{x['current_delay']} min"), 
+        f"Current Delay: +{x['current_delay']} min"), 
     axis=1)
 
     # filter only relevant rows
@@ -249,7 +255,7 @@ if st.session_state.run_prediction:
     df = df.drop(columns = ["current_delay", "stops_total", "stop_index", "stops_remaining"])
 
     # create features
-    df_features = create_features(df, api = True, historical_features = st.session_state.historical_features_list)
+    df_features = create_features_api(df, historical_features = st.session_state.historical_features_list)
     df_final = df_features[df_features["station_current"] == st.session_state.start_station] # only one row
 
     st.session_state.df_final = df_final
@@ -294,7 +300,7 @@ if st.session_state.pred_mean is not None:
     # HAS TO BE ADDED
 
 
-### 8 ALLOW TO EXPORT THE RESULTS
+### 8 EXPORT THE RESULTS
 if st.session_state.pred_mean is not None:
 
     # layout
@@ -303,23 +309,26 @@ if st.session_state.pred_mean is not None:
 
     # text for export
     export_text = f"""BAHN DELAY PREDICTION REPORT
-    --------------------------------
-    Connection: {st.session_state.start_station} -> {st.session_state.end_station}
-    Train: {st.session_state.train_selected}
-    Ticket Price: {st.session_state.ticket_price:.2f}€
+--------------------------------
+Connection: {st.session_state.start_station} -> {st.session_state.end_station}
+Train: {st.session_state.train_selected}
+Ticket Price: {st.session_state.ticket_price:.2f}€
 
-    PREDICTION RESULTS:
-    - Average Expected Delay: {st.session_state.pred_mean:.1f} min
-    - Best Case (5% Quantile): {st.session_state.pred_q05:.1f} min
-    - Worst Case (95% Quantile): {st.session_state.pred_q95:.1f} min
+PREDICTION RESULTS:
+- Average Expected Delay: {st.session_state.pred_mean:.1f} min
+- Best Case (5% Quantile): {st.session_state.pred_q05:.1f} min
+- Worst Case (95% Quantile): {st.session_state.pred_q95:.1f} min
 
-    Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}"""
+MODEL CONFIGURATION:
+{st.session_state.get('model_info_text', 'No model info available.')}
 
-    # download buttomn
+Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}"""
+
+    # download button
     st.download_button(
-        label="Download results as TXT",
+        label="Download Report (TXT)",
         data=export_text,
-        file_name=f"delay_prediction_{st.session_state.end_station}.txt",
+        file_name=f"delay_prediction_{st.session_state.train_selected}.txt",
         mime="text/plain"
     )
     
