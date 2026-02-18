@@ -192,7 +192,7 @@ if st.session_state.df_destinations:
                     st.session_state.run_prediction = False
 
 
-### 4 DISPLAY AND SELECT CONNECTIONS
+### 4 DISPLAY AND SELECT CONNECTION
 if st.session_state.connections is not None:
     
     # get data from session state
@@ -202,17 +202,33 @@ if st.session_state.connections is not None:
     st.divider()
     st.subheader("Available connections:")
 
-    # st.dataframe(df[["train_name", "departure_real"]])
-    df["print"] = df.apply(lambda x: f"{x['train_name']} (Planned: {x['departure_planned']}) | Actual Delay: +{x['current_delay']} min", axis=1)
-    selected_connection = st.selectbox("Trains:", df["print"])
-    
-    # get chosen train and save in session state
-    train_name = df[df["print"] == selected_connection]["train_name"].iloc[0]
-    df_selected = df[df["train_name"] == train_name]
+    # get arrivales at end station
+    arrivals = df[df["station_current"] == st.session_state.end_station].set_index("train_name")["arrival_planned"].to_dict()
 
-    # save results in session state
-    st.session_state.train_selected = train_name
-    st.session_state.df_selected = df_selected
+
+    df["print"] = df.apply(
+    lambda x: (
+        f"🚆 {x['train_name']} | "
+        f"Dep: {pd.to_datetime(x['departure_planned']).strftime('%H:%M') if pd.notnull(x['departure_planned']) else '??:??'} → "
+        f"Arr: {pd.to_datetime(arrivals.get(x['train_name'])).strftime('%H:%M') if pd.notnull(arrivals.get(x['train_name'])) else '??:??'} | "
+        f"Delay: +{x['current_delay']} min"), 
+    axis=1)
+
+    # filter only relevant rows
+    filtered_options = df["print"][df["station_current"] == start_station].tolist()
+
+    if not filtered_options:
+        st.warning("No connections found for the starting station.")
+    else: 
+        selected_connection = st.selectbox("Trains:", filtered_options)
+        # get chosen train and save in session state
+        train_name = df[df["print"] == selected_connection]["train_name"].iloc[0]
+        df_selected = df[df["train_name"] == train_name]
+        
+        if not selected_connection.empty:
+            # save results in session state
+            st.session_state.train_selected = train_name
+            st.session_state.df_selected = df_selected
 
     with st.container(border=True):
         st.session_state.ticket_price = st.number_input("Price (€)", value=st.session_state.ticket_price)
