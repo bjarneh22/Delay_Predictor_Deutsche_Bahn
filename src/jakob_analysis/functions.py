@@ -9,12 +9,6 @@ import holidays
 from sklearn.preprocessing import FunctionTransformer
 
 
-#########################
-# FILTERING
-#########################
-
-
-
 
 #########################
 # FEATURES
