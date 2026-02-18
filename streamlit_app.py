@@ -11,20 +11,16 @@ from pathlib import Path
 import time 
 import sys 
 import os 
-import joblib
+import joblib 
 
 
-# import custom functions (Jakob)
-try:
-    from src.jakob_analysis.functions import * 
-except ImportError: 
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-    try:
-        from src.jakob_analysis.functions import * 
-    except ImportError as e:
-        st.error(f"Fehler beim Import: {e}")
-        st.stop()
-    
+
+# base dir
+BASE_DIR = Path(__file__).resolve().parent   
+SRC_DIR = os.path.join(BASE_DIR, 'src')
+if SRC_DIR not in sys.path:
+    sys.path.append(SRC_DIR)
+
 # import fetcher class (Bjarne)
 try: 
     from src.bjarne_api.collector_new import Fetcher
@@ -36,8 +32,18 @@ except ImportError:
         st.error(f"Import Fehler: {e}")
         st.stop()
 
-# base dir
-BASE_DIR = Path(__file__).resolve().parent   
+# import custom functions (Jakob)
+try:
+    from src.jakob_analysis.functions import create_features_api
+except ImportError: 
+    sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+    try:
+        from src.jakob_analysis.functions import create_features_api
+    except ImportError as e:
+        st.error(f"Fehler beim Import: {e}")
+        st.stop()
+    
+
 
 if "historical_features_list" not in st.session_state:
     try: 
@@ -51,6 +57,8 @@ if "historical_features_list" not in st.session_state:
             df_station,
             df_train
         ]
+        
+        st.session_state.stations_list = sorted(df_station["station_current"].unique())
 
     except FileNotFoundError as e:
         st.error(f"Files not found: {e}")
@@ -149,6 +157,7 @@ if start_station and start_station != st.session_state.start_station:
     st.session_state.start_station = start_station
     st.session_state.connections = None
     st.session_state.df_destinations = None
+    st.session_state.departures = []
     st.session_state.run_prediction = False
 
 
@@ -159,19 +168,32 @@ if st.session_state.start_station and st.session_state.df_destinations is None:
 
         # get api data
         fetcher = Fetcher()
-        df_departures, err = fetcher.stations_details(st.session_state.start_station)
-        df_trip = fetcher.trip_details()
-        final_df = fetcher.create_dataframe()
-
-        # filter: only keep ICE and IC trains
-        df_filtered = final_df[final_df["train_type"].isin(["ICE", "IC"])]
-    
-        # get possible destinations 
-        df_destinations = get_possible_destinations(df_filtered, st.session_state.start_station)
-
-        # save results in session state
-        st.session_state.df_filtered = df_filtered
-        st.session_state.df_destinations = df_destinations
+        station_id = fetcher.get_station_id(st.session_state.start_station)
+        
+        if station_id:
+            departures = fetcher.stations_details(station_id)
+            
+            if departures: 
+                relevant_departures = []
+                destinations = set()
+                
+                for dep in departures:
+                    line = dep.get("line", {})
+                    product = line.get("productName")
+                    direction = dep.get("direction")
+                    
+                    if product in ["ICE", "IC", "EC"] and direction:
+                        relevant_departures.append(dep)
+                        destinations.add(direction)
+                        
+                st.session_state.departures = relevant_departures
+                st.session_state.df_destinations = sorted(destinations)
+                        
+            else: 
+                st.warning("No departures found for the selected station.")
+        else:
+            st.error("Station ID not found for the selected station.")
+                                                                
 
 
 ### 3 SELECT DESTINATION + GET CONNECTIONS 
@@ -187,15 +209,32 @@ if st.session_state.df_destinations:
             if not end_station:
                 st.warning("Please select a destination station.")
             else: 
-                df_connections = get_connections(st.session_state.df_filtered, st.session_state.start_station, end_station)
-                
-                if df_connections.empty:
-                    st.warning("No connections found.")
-                else:
-                    # save results in session state
-                    st.session_state.connections = df_connections
-                    st.session_state.end_station = end_station
-                    st.session_state.run_prediction = False
+                with st.spinner("Searching for possible connections..."):
+                    fetcher = Fetcher()
+                    connections_found = [] 
+                    
+                    for i, dep in enumerate(st.session_state.departures):
+                        if end_station in dep.get("direction", ""):
+                            trip_id = dep.get("tripId")
+                            if trip_id:
+                                trip_data = fetcher.trip_details(trip_id)
+                                if trip_data:
+                                    df_trip = fetcher.create_dataframe(trip_data, ride_id = i)
+                                    
+                                    if not df_trip.empty:
+                                        train_name = df_trip["train_name"].iloc[0]
+                                        st.session_state.full_trip_store[train_name] = df_trip
+                                        
+                                        row = df_trip[df_trip["station_current"] == st.session_state.start_station]
+                                        if not row.empty:
+                                            connections_found.append(row)
+                        
+                    if connections_found:
+                        st.session_state.connections = pd.concat(connections_found)
+                        st.session_state.end_station = end_station
+                    else:
+                        st.warning("No detailed connections found")
+
 
 
 ### 4 DISPLAY AND SELECT CONNECTION
@@ -208,57 +247,57 @@ if st.session_state.connections is not None:
     st.divider()
     st.subheader("Available connections:")
 
-    # get arrivales at end station
-    arrivals = df[df["station_current"] == st.session_state.end_station].set_index("train_name")["arrival_planned"].to_dict()
-
-
     df["print"] = df.apply(
-    lambda x: (
-        f"🚆 {x['train_name']} | "
-        f"Dep: {pd.to_datetime(x['departure_planned']).strftime('%H:%M') if pd.notnull(x['departure_planned']) else '??:??'} → "
-        f"Arr: {pd.to_datetime(arrivals.get(x['train_name'])).strftime('%H:%M') if pd.notnull(arrivals.get(x['train_name'])) else '??:??'} | "
-        f"Current Delay: +{x['current_delay']} min"), 
-    axis=1)
-
-    # filter only relevant rows
-    filtered_options = df["print"][df["station_current"] == start_station].tolist()
-
-    if not filtered_options:
-        st.warning("No connections found for the starting station.")
-    else: 
-        selected_connection = st.selectbox("Trains:", filtered_options)
-        # get chosen train and save in session state
-        train_name = df[df["print"] == selected_connection]["train_name"].iloc[0]
-        df_selected = df[df["train_name"] == train_name]
+        lambda x: (
+            f"{x['train_name']} | "
+            f"Departure: {pd.to_datetime(x['departure_planned']).strftime('%H:%M')} | "
+            f"Delay: + {x['current_delay']} min"
+        ),
+        axis = 1
+    )
+    
+    travel_options = df["print"].tolist()
+    
+    if not travel_options:
+        st.warning("No travel options available.")
+    else:
+        selected_option = st.selectbox("Select a connection", travel_options)
         
-        if not selected_connection.empty:
-            # save results in session state
+        if selected_option:
+            train_name = df[df["print"] == selected_option]["train_name"].iloc[0]
+            df_selected = df[df["train_name"] == train_name]
+            
             st.session_state.train_selected = train_name
             st.session_state.df_selected = df_selected
-
+            
     with st.container(border=True):
-        st.session_state.ticket_price = st.number_input("Price (€)", value=st.session_state.ticket_price)
+        st.session_state.ticket_price = st.number_input("Price in Euro €", value = st.session_state.ticket_price if "ticket_price" in st.session_state else 0.0, min_value=0.0)
 
-        if st.button("Calculate prediction!", type="primary"):
+        if st.button("Calculate delay prediction"):
             st.session_state.run_prediction = True
 
 
 ### 5 DATA WRANGLING FOR MODEL 
-if st.session_state.run_prediction:
-
-    # get data from session state
-    df = st.session_state.df_selected
+if st.session_state.run_prediction and st.session_state.train_selected:
     
-    # rename columns (for matching with lookup)
-    df = df.rename({"precip": "precipitation", "temp": "temperature"}, axis=1)
-    # drop columns
-    df = df.drop(columns = ["current_delay", "stops_total", "stop_index", "stops_remaining"])
-
-    # create features
+    df = st.session_state.full_trip_store[st.session_state.train_selected].copy()
+    
+    df = df.rename(columns={
+        "temp" : "temperature", "precip": "precipitation"
+    })
+    
+    df = df.drop(columns=["current_delay", "stops_total", "stop_index", "stops_remaining"], errors="ignore")
+    
     df_features = create_features_api(df, historical_features = st.session_state.historical_features_list)
-    df_final = df_features[df_features["station_current"] == st.session_state.start_station] # only one row
-
-    st.session_state.df_final = df_final
+    
+    
+    start_rows = df[df["station_current"] == st.session_state.start_station]
+    
+    if not start_rows.empty:
+        start_index = start_rows.index[0]
+        st.session_state.df_final = df_features.loc[start_index:]
+    else:
+        st.error("Start station not found in the selected train's route.")
 
 
 ### 6 PREDICTION
