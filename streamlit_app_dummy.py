@@ -120,7 +120,11 @@ defaults = {
     "run_prediction": False, # run prediction
     "pred_mean": None, # prediction
     "pred_q05": None, # prediction
-    "pred_q95": None # prediction
+    "pred_q95": None, # prediction
+    "eff_price": None, # output
+    "category": None, # output
+    "reasoning": None, # output
+    "price_at_calculation": None # check to prevent errors in txt-export
     }
 for key, value in defaults.items():
     # if key in session state: do not change session state
@@ -152,12 +156,28 @@ with st.sidebar:
 with st.container(border=True):
     start_station = st.selectbox("Start station", options = [""] + st.session_state.stations_list, index = 0)
     
-if start_station and start_station != st.session_state.start_station:
-    # reset states if start_station_changed
+# reset everything if start_station changed
+if start_station != st.session_state.start_station:
+
+    # set new start station
     st.session_state.start_station = start_station
-    st.session_state.connections = None
+
+    # waterfall reset
     st.session_state.df_destinations = None
+    st.session_state.end_station = None
+    st.session_state.connections = None
+    st.session_state.train_selected = None
+    st.session_state.df_selected = None
+    st.session_state.df_final = None
     st.session_state.run_prediction = False
+    st.session_state.pred_mean = None
+    st.session_state.pred_q05 = None
+    st.session_state.pred_q95 = None
+    st.session_state.eff_price = None
+    st.session_state.category = None
+    st.session_state.reasoning = None
+    st.session_state.ticket_price = 50.0
+    st.session_state.price_at_calculation = None
 
 
 ### 2 LOAD DATA IF START_STATION SELECTED
@@ -170,7 +190,7 @@ if st.session_state.start_station and st.session_state.df_destinations is None:
 
             final_df = pd.read_csv(BASE_DIR / "data" / "mock_api_data.csv")
             # st.session_state.df_destinations = sorted(st.session_state.departures["station_dest"].unique())
-            time.sleep(0.5)
+            time.sleep(1.5)
         
         # API MODE
         else:
@@ -196,9 +216,21 @@ if st.session_state.df_destinations:
         # select destination station: select from possible stations 
         with st.container(border=True):
             end_station = st.selectbox("Destination station", options = [""] + st.session_state.df_destinations, index = 0)
+
+            # reset session state when end_station changed
+            if end_station != st.session_state.end_station:
+                st.session_state.connections = None
+                st.session_state.end_station = None
+                st.session_state.pred_mean = None
+                st.session_state.pred_q05 = None
+                st.session_state.pred_q95 = None
+                st.session_state.run_prediction = False
+                st.session_state.train_selected = None
+                st.session_state.ticket_price = 50.0
+                st.session_state.price_at_calculation = None
     
         # search for connections 
-        if st.button("Search connections:"):
+        if st.button("Search connections"):
 
             if not end_station:
                 st.warning("Please select a destination station.")
@@ -227,7 +259,7 @@ if st.session_state.connections is not None:
     # get arrivales at end station
     arrivals = df[df["station_current"] == st.session_state.end_station].set_index("train_name")["arrival_planned"].to_dict()
 
-
+    # create output version ("print")
     df["print"] = df.apply(
     lambda x: (
         f"🚆 {x['train_name']} | "
@@ -242,21 +274,47 @@ if st.session_state.connections is not None:
     if not filtered_options:
         st.warning("No connections found for the starting station.")
     else: 
-        selected_connection = st.selectbox("Trains:", filtered_options)
-        # get chosen train and save in session state
-        train_name = df[df["print"] == selected_connection]["train_name"].iloc[0]
-        df_selected = df[df["train_name"] == train_name]
+        selected_connection = st.selectbox("Trains:", filtered_options, index=None, 
+                                           placeholder="Select a connection...",
+                                           key=f"train_selector_{st.session_state.end_station}")
         
-        if not selected_connection.empty:
-            # save results in session state
-            st.session_state.train_selected = train_name
-            st.session_state.df_selected = df_selected
+        # only run when selection was made
+        if selected_connection:
 
-    with st.container(border=True):
-        st.session_state.ticket_price = st.number_input("Price (€)", value=st.session_state.ticket_price)
+            # check: is the selected connection new?
+            new_train_name = df[df["print"] == selected_connection]["train_name"].iloc[0]
+            if new_train_name != st.session_state.train_selected:
 
-        if st.button("Calculate prediction!", type="primary"):
-            st.session_state.run_prediction = True
+                # get chosen train and save in session state and save in session state
+                st.session_state.train_selected = new_train_name
+                st.session_state.df_selected = df[df["train_name"] == new_train_name]
+
+                # reset rest of session state
+                st.session_state.run_prediction = False
+                st.session_state.pred_mean = None
+                st.session_state.pred_q05 = None
+                st.session_state.pred_q95 = None
+                st.session_state.df_final = None
+            
+        
+        # show buttons and price input after selection
+            if "train_selected" in st.session_state and st.session_state.train_selected:
+
+                with st.container(border=True):
+                    new_price = st.number_input("Price (€)", value=st.session_state.ticket_price)
+        
+                    # check if new price and old price (after hitting calculation-button) are identical
+                    # if not: reset session state
+                    if new_price != st.session_state.get("price_at_calculation"):
+                        st.session_state.run_prediction = False
+                        st.session_state.pred_mean = None # section 7/8 disappear
+
+                    st.session_state.ticket_price = new_price
+
+                if st.button("Calculate prediction!", type="primary"):
+                    st.session_state.run_prediction = True
+                    # save the price after pressing calculate predicition (later check for txt-output)
+                    st.session_state.price_at_calculation = st.session_state.ticket_price
 
 
 ### 5 DATA WRANGLING FOR MODEL 
@@ -304,16 +362,49 @@ if st.session_state.pred_mean is not None:
 
     # layout
     st.divider()
-    st.subheader("Results & Analysis")
+    st.subheader("Prediction")
 
-    # display results prediction
+    # PREDICTION RESULTS
     col1, col2, col3 = st.columns(3)
     col1.metric("Ø Expected", f"{st.session_state.pred_mean:.1f} min")
     col2.metric("Best Case (5%)", f"{st.session_state.pred_q05:.1f} min")
     col3.metric("Worst Case (95%)", f"{st.session_state.pred_q95:.1f} min", delta_color="inverse")
 
-    # display results for ticket price
-    # HAS TO BE ADDED
+
+    # TICKET PRICE RESULTS
+
+    # setup
+    price = st.session_state.ticket_price
+    avg_delay = st.session_state.pred_mean
+
+    # worst-case helper
+    if st.session_state.pred_q95 >= 120:
+        worst_note = f"However, in the **worst case (95%)**, your delay could exceed 120 min, leading to a **50% refund ({price * 0.5:.2f} €)**."
+    elif st.session_state.pred_q95 >= 60:
+        worst_note = f"However, in the **worst case (95%)**, you could reach the 60 min threshold, resulting in a **25% refund ({price * 0.75:.2f} €)**."
+    else:
+        worst_note = "Even in the worst case, you are unlikely to reach the 60 min refund threshold."
+    
+    # category and effective price
+    if avg_delay < 60:
+        st.session_state.eff_price = price
+        st.session_state.category = "Delay < 60 min (0% refund)"
+        st.session_state.reasoning = f"Since your predicted average is **{avg_delay:.1f} min**, you will likely pay the full price. {worst_note}"
+    elif 60 <= avg_delay < 120:
+        st.session_state.eff_price = price * 0.75
+        st.session_state.category = "Delay 60-119 min (25% refund)"
+        st.session_state.reasoning = f"Since your predicted average is **{avg_delay:.1f} min**, you fall into the 25% refund category. {worst_note}"
+    else:
+        st.session_state.eff_price = price * 0.5
+        st.session_state.category = "Delay ≥ 120 min (50% refund)"
+        st.session_state.reasoning = f"With an average prediction of **{avg_delay:.1f} min**, you are likely to get 50% back! {worst_note}"
+
+    # display results
+    st.divider()
+    st.subheader("Predicted Effective Price")
+    st.title(f"{st.session_state.eff_price:.2f} €")
+    st.info(st.session_state.reasoning)
+
 
 
 ### 8 EXPORT THE RESULTS
@@ -334,6 +425,11 @@ PREDICTION RESULTS:
 - Average Expected Delay: {st.session_state.pred_mean:.1f} min
 - Best Case (5% Quantile): {st.session_state.pred_q05:.1f} min
 - Worst Case (95% Quantile): {st.session_state.pred_q95:.1f} min
+
+PRICE ANALYSIS:
+- Predicted Effective Price: {st.session_state.eff_price:.2f}€
+- Refund Category: {st.session_state.category}
+- Summary: {st.session_state.reasoning.replace('**', '')}
 
 MODEL CONFIGURATION:
 {st.session_state.get('model_info_text', 'No model info available.')}

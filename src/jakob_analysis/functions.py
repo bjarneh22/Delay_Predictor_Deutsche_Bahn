@@ -8,7 +8,6 @@ import holidays
 from sklearn.preprocessing import FunctionTransformer
 
 
-
 #########################
 # FEATURES
 #########################
@@ -369,7 +368,7 @@ def create_features_api(df, historical_features):
     
 
     final_cols = [
-        "train_type", "temperature", "wind_speed", "travel_time",
+        "station_current", "train_type", "temperature", "wind_speed", "travel_time",
         "weekday_sin", "weekday_cos", "weekend", "month_sin", "month_cos",
         "feast", "hour_sin", "hour_cos", "dwell_time_planned", "station_role",
         "time_since_start_planned", "precipitation_any", "precipitation_log",
