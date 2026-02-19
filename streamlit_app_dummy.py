@@ -140,6 +140,14 @@ st.set_page_config(page_title="Bahn Delay Predictor", page_icon="🚆")
 st.title("🚆 Bahn Delay Predictor")
 
 
+# 0 MOCK VERSION SELECTER
+with st.sidebar:
+    st.header("Settings")
+    st.session_state.mock_mode = st.toggle("Enable Mock Mode (Testing)", value=False)
+    if st.session_state.mock_mode:
+        st.info("Mock Mode active: Using dummy data instead of API.")
+
+
 ### 1 SELECT START STATION
 with st.container(border=True):
     start_station = st.selectbox("Start station", options = [""] + st.session_state.stations_list, index = 0)
@@ -157,11 +165,19 @@ if st.session_state.start_station and st.session_state.df_destinations is None:
 
     with st.spinner("Searching for possible connections..."):
 
-        # get api data
-        fetcher = Fetcher()
-        df_departures, err = fetcher.stations_details(st.session_state.start_station)
-        df_trip = fetcher.trip_details()
-        final_df = fetcher.create_dataframe()
+        # MOCK MODE 
+        if st.session_state.mock_mode:
+
+            final_df = pd.read_csv(BASE_DIR / "data" / "mock_api_data.csv")
+            # st.session_state.df_destinations = sorted(st.session_state.departures["station_dest"].unique())
+            time.sleep(0.5)
+        
+        # API MODE
+        else:
+            fetcher = Fetcher()
+            df_departures, err = fetcher.stations_details(st.session_state.start_station)
+            df_trip = fetcher.trip_details()
+            final_df = fetcher.create_dataframe()
 
         # filter: only keep ICE and IC trains
         df_filtered = final_df[final_df["train_type"].isin(["ICE", "IC"])]
