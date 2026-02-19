@@ -1,3 +1,16 @@
+'''
+This module contain the Fetcher class, which is responsible for fetching data from the API and processing it into a DataFrame.
+The Fetcher class contains the following methods: 
+
+- get_station_id: This method takes a station name as input and returns the corresponding station ID from the API.
+- stations_details: This method takes a station ID as input and returns the departure details for that station.
+- trip_details: This method takes a trip ID as input and returns the details of that trip.
+- create_dataframe: This method takes the trip details and creates a DataFrame with relevant features for machine learning.
+- find_connection: This method takes a start station and an end station as input and returns a DataFrame with possible connections between the two stations.
+
+Author: Member 2 (Student ID: 25268915)
+'''
+
 import requests 
 from requests.exceptions import HTTPError
 import pandas as pd
@@ -5,7 +18,7 @@ import urllib.parse
 from typing import Optional, Dict, Any, List
 
 # get weather information for a station 
-def get_weather(lat, lon):
+def get_weather(lat: float, lon: float) -> Optional[Dict[str, Any]]:
 
     # Store the url for the API 
     url = "https://api.open-meteo.com/v1/forecast"
@@ -209,7 +222,7 @@ class Fetcher:
                     if df.empty: continue
                         
                     # Finde die Zeile für den Einstiegspunkt
-                    entry_row = df[df["current_station"].str.contains(start_station, case=False, na=False)]
+                    entry_row = df[df["station_current"].str.contains(start_station, case=False, na=False)]
                     
                     if not entry_row.empty:
                         connections.append(entry_row.iloc[0])
@@ -222,7 +235,7 @@ class Fetcher:
 # Ausführung im Hauptprogramm 
 if __name__ == "__main__":
     fetcher = Fetcher()
-    station_name = "Aachen Hbf" 
+    station_name = "Berlin Hbf" 
     
     print(f"Suche Station ID für {station_name}...")
     station_id = fetcher.get_station_id(station_name)
