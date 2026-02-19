@@ -65,7 +65,7 @@ if "models_loaded" not in st.session_state:
     try:
         file_path_mean = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_mean.pkl"
         file_path_q05 = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_q05.pkl"
-        file_path_q95 = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_95.pkl" # CHANGE NAME
+        file_path_q95 = BASE_DIR / "src" / "jakob_analysis" / "pipeline_hgb_q95.pkl" 
 
         st.session_state.pipe_mean = joblib.load(file_path_mean)
         st.session_state.pipe_q05 = joblib.load(file_path_q05)
