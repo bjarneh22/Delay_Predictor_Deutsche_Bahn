@@ -15,6 +15,23 @@ from sklearn.preprocessing import FunctionTransformer
 
 ### CREATE HISTORICAL DELAY FEATURES ### 
 def historic_delay_features(df, variable, prefix):
+    """
+    Calculates historical delay statistics for specific stations or trains (train_name).
+
+    The function creates delay statistics based on a 60-day observation window that ends 
+    60 days before the current event. It aggregates mean, 90th percentile and observation counts.
+
+    Args:
+        df (pd.DataFrame): The cleaned historical train delay dataset. 
+        variable (str): The column to group by (for this variable delay statistics are computed). 
+                        Here: 'train_name' or 'station_current'.
+        prefix (str): Prefix for the generated feature columns (e.g., 'hist_station').
+
+    Returns:
+        pd.DataFrame: Dataframe containing the aggregated historical features. 
+                      - If variable is 'train_name': Index is 'ride_id'.
+                      - If variable is 'station': Index is 'date' per station.
+    """
 
     # make correct date format
     ## for train_name: date not needed because ride_id is used
@@ -109,6 +126,22 @@ def historic_delay_features(df, variable, prefix):
 ### CREATE FEATURES FOR HISTORICAL DATA ### 
 # all features are created and historical features are added
 def create_features_historical(df, historical_features):
+    """
+    Performs full feature engineering for historical data.
+
+    This function calculates different kinds of features. It later adds 
+    the historical delay statistics using specific key variables ('date' and 'ride_id').
+
+    Args:
+        df (pd.DataFrame): The cleaned historical train delay dataset.
+        historical_features (list): A list of two Dataframes:
+            - [0]: Historical station delays (merged on 'station_current' and 'date').
+            - [1]: Historical train delays (merged on 'train_name' and 'ride_id').
+
+    Returns:
+        pd.DataFrame: A dataframe with all features (cyclical time encodings, 
+                      weather features, and merged historical delay metrics).
+    """
 
 
     ### PREPARATION
@@ -253,7 +286,25 @@ def create_features_historical(df, historical_features):
 ### CREATE FEATURES FOR API DATA ### 
 # only the necessary features are created and historical features are added
 def create_features_api(df, historical_features):
+    """
+    Performs streamlined feature engineering for real-time API data.
 
+    This function calculates the same features as the historical version but 
+    restricts the output to the relevant columns selected during exploratory 
+    data analysis. Historical performance is added via static lookup files 
+    using only the keys 'station' and 'train name' to enable predictions 
+    for current journeys.
+
+    Args:
+        df (pd.DataFrame): The train data from the API.
+        historical_features (list): A list of two DataFrames:
+            - [0]: Station delay lookups based on the last 60 observed days (merged on 'station_current').
+            - [1]: Train delay lookups based on the last 60 observed days (merged on 'train_name').
+
+    Returns:
+        pd.DataFrame: Dataframe containing only the specific final features 
+                      required by the model for inference.
+    """
 
     ### PREPARATION
 
@@ -388,6 +439,20 @@ def create_features_api(df, historical_features):
 
 ### FIND POSSIBLE DESTINATIONS FROM A GIVEN STATION ###
 def get_possible_destinations(df, station_name):
+    """
+    Returns all future destinations reachable from a specific station.
+
+    The function filters for long-distance trains (ICE/IC).
+    Then it finds stations that are reached chronologically after 
+    the departure from the specified station.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing ride results (either historical data or api data).
+        station_name (str): Name of the starting train station.
+
+    Returns:
+        list: A sorted list of unique station names (strings) reachable from the given station.
+    """
 
     # filter only ICE and IC 
     df = df[df["train_type"].str.contains("ICE|IC", case=False, na=False)]
@@ -416,7 +481,23 @@ def get_possible_destinations(df, station_name):
 
 ### GET CONNECTIONS BETWEEN TWO STATIONS ###
 def get_connections(df, station_start, station_dest):
-    
+    """
+    Returns full rides that connect a specific start and destination station.
+
+    Function iterates through unique train journeys (ride_id) and checks if 
+    the destination station is reached chronologically after the departure 
+    from the start station.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing ride results (either historical data or api data).
+        station_start (str): Name of the start station.
+        station_dest (str): Name of the destination station.
+
+    Returns:
+        pd.DataFrame or None: Dataframe containing all rows for the relevant 
+                              ride_ids if connections exist; otherwise None.
+    """
+
     suited_rides = []
 
     for ride_id, train_group in df.groupby("ride_id"):
@@ -440,3 +521,38 @@ def get_connections(df, station_start, station_dest):
     else:
         print(f"No current connections found.")
         return None
+    
+
+
+#########################
+# ML-MODEL
+#########################
+
+
+def choose_features_target(df):
+    """
+    Extracts the feature matrix (X) by excluding non-predictive columns.
+
+    This function filters out i.e., identifiers, raw time variables
+    and features discarded during exploratory data analysis to prepare 
+    the data for model input.
+
+    Args:
+        df (pd.DataFrame): The cleaned historical train delay dataset.
+
+    Returns:
+        pd.DataFrame: Feature matrix containing only relevant columns.
+    """
+    
+    cols_exclude = ["ride_id", # id
+                    "delay", # target
+                    "departure_real","arrival_real", "departure_planned", "arrival_planned", # raw time variables
+                    "train_name", "station_current", "station_start", "station_dest", # high-dimensional categories 
+                    "hist_delay_train_q90", "hist_delay_station_q90", "stops_total", "stop_index", "share_ride_time", # discarded after correlation analysis
+                    "print"
+                    ]
+    
+    existing_exclude = [col for col in cols_exclude if col in df.columns]
+    
+    return df.drop(columns=existing_exclude)
+
