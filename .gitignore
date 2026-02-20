@@ -12,7 +12,6 @@ env/
 .idea/
 
 # Datensätze begrenzen
-data/*.csv
 data/*.json
 data/*.duckdb
 data/train_delay_with_features.parquet

@@ -136,10 +136,39 @@ for key, value in defaults.items():
 st.set_page_config(page_title="Bahn Delay Predictor", page_icon="🚆")
 st.title("🚆 Bahn Delay Predictor")
 
-# 0 MOCK VERSION SELECTER
+
+### SIDEBAR ###
+
 with st.sidebar:
-    st.header("Settings")
-    st.session_state.mock_mode = st.toggle("Enable Mock Mode (Testing)", value=False)
+    st.header("Bahn Delay Predictor Settings")
+
+    # help toggle
+    show_help = st.checkbox("Show Help / Instructions")
+    if show_help:
+        st.markdown("""
+### How to Use 🚆
+
+1. **Select your departure station** from the dropdown menu.
+2. **Choose one of the available destination stations**.
+3. **Pick a train connection** from the list of available options.
+4. **Enter the ticket price** you paid for your journey.
+5. Click **"Calculate Prediction!"**.
+6. View the **predicted delay**, including best-case and worst-case scenarios, as well as the **predicted effective price**.
+7. Optionally, download a **delay prediction report** as a `.txt` file by clicking **"Download Report (TXT)"** under **Export Results**.
+
+""")
+
+        st.info("💡 Tip: Enable Mock Mode below for testing without connecting to the API.")
+        st.warning("""
+                    - If no destinations appear, the app will show the message *"Sadly there is no possible destination for you to go to. Please select a different start station."*.
+                    - Make sure all required data files are available in the `data/` folder.
+                    """)
+
+    st.markdown("---")  # separator
+
+    # mock mode toggle
+    st.subheader("Testing / Mock Mode")
+    st.session_state.mock_mode = st.checkbox("Enable Mock Mode (Testing)", value=False)
     if st.session_state.mock_mode:
         st.info("Mock Mode active: Using dummy data instead of API.")
 
@@ -188,7 +217,15 @@ if st.session_state.start_station and st.session_state.df_destinations is None:
 
 
 ### 3 SELECT DESTINATION + GET CONNECTIONS 
-if st.session_state.df_destinations:
+if st.session_state.start_station:
+
+    if st.session_state.df_destinations is None:
+        pass  # still loading
+
+    elif len(st.session_state.df_destinations) == 0:
+        st.info("Sadly there is no possible destination for you to go to. Please select a different start station.")
+
+    else:
         
         with st.container(border=True):
             end_station = st.selectbox("Destination station", options = [""] + st.session_state.df_destinations, index = 0)
