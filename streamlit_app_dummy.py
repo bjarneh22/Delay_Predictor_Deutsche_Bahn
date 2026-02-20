@@ -340,15 +340,6 @@ if st.session_state.run_prediction and st.session_state.df_final is not None:
 
     with st.spinner("Calculating predictions..."):
         # define features
-        def choose_features_target(df): # ADJUST THIS FUNCTION
-            cols_exclude = [
-                "ride_id", "delay", "departure_real", "arrival_real", 
-                "departure_planned", "arrival_planned", "train_name", 
-                "station_current", "station_start", "station_dest", 
-                "hist_delay_train_q90", "hist_delay_station_q90", 
-                "stops_total", "stop_index", "share_ride_time", "print"]
-            feature_cols = [col for col in df.columns if col not in cols_exclude]
-            return df[feature_cols]
         X = choose_features_target(st.session_state.df_final)
 
         # prediction
