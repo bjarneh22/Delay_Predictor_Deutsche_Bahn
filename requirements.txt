@@ -11,3 +11,8 @@ nbformat
 seaborn
 statsmodels
 sklearn-quantile
+plotly
+joblib 
+urllib
+typing
+datetime
