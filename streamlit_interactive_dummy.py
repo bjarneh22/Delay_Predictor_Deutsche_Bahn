@@ -11,6 +11,7 @@ import time
 import sys 
 import os 
 import joblib
+import plotly.graph_objects as go
 
 # import custom functions (Jakob)
 try:
@@ -291,7 +292,7 @@ if st.session_state.run_prediction and st.session_state.df_final is not None:
         st.session_state.pred_q95 = st.session_state.pipe_q95.predict(X)[0]
 
 
-### 7 DISPLAY THE RESULTS (INKL. CHART.JS)
+### 7 DISPLAY THE RESULTS
 if st.session_state.pred_mean is not None:
 
     st.divider()
@@ -303,71 +304,32 @@ if st.session_state.pred_mean is not None:
     col2.metric("Best Case (5%)", f"{st.session_state.pred_q05:.1f} min")
     col3.metric("Worst Case (95%)", f"{st.session_state.pred_q95:.1f} min", delta_color="inverse")
 
-    # --- NEU: CHART.JS IMPLEMENTIERUNG ---
-    # Wir übergeben die berechneten Werte als f-String direkt in den JavaScript Code
-    chart_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
-    <body style="background-color: transparent;">
-        <div style="width: 100%; max-width: 600px; margin: auto;">
-            <canvas id="delayChart"></canvas>
-        </div>
-        <script>
-            const ctx = document.getElementById('delayChart').getContext('2d');
-            new Chart(ctx, {{
-                type: 'bar',
-                data: {{
-                    labels: ['Best Case (5%)', 'Ø Expected', 'Worst Case (95%)'],
-                    datasets: [{{
-                        label: 'Predicted Delay in Minutes',
-                        data: [{st.session_state.pred_q05:.1f}, {st.session_state.pred_mean:.1f}, {st.session_state.pred_q95:.1f}],
-                        backgroundColor: [
-                            'rgba(75, 192, 192, 0.6)',  // Grün (Best Case)
-                            'rgba(255, 206, 86, 0.6)',  // Gelb (Expected)
-                            'rgba(255, 99, 132, 0.6)'   // Rot (Worst Case)
-                        ],
-                        borderColor: [
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(255, 99, 132, 1)'
-                        ],
-                        borderWidth: 1
-                    }}]
-                }},
-                options: {{
-                    responsive: true,
-                    scales: {{
-                        y: {{
-                            beginAtZero: true,
-                            title: {{
-                                display: true,
-                                text: 'Minutes'
-                            }}
-                        }}
-                    }},
-                    plugins: {{
-                        legend: {{
-                            display: false
-                        }}
-                    }}
-                }}
-            }});
-        </script>
-    </body>
-    </html>
-    """
-    
-    # Render HTML in Streamlit
-    components.html(chart_html, height=350)
-    # -------------------------------------
+    # --- REINES PYTHON INTERAKTIVES CHART (PLOTLY) ---
+    fig = go.Figure(data=[
+        go.Bar(
+            x=['Best Case (5%)', 'Ø Expected', 'Worst Case (95%)'],
+            y=[st.session_state.pred_q05, st.session_state.pred_mean, st.session_state.pred_q95],
+            marker_color=['#4BC0C0', '#FFCE56', '#FF6384'], # Grün, Gelb, Rot
+            text=[f"{st.session_state.pred_q05:.1f} min", f"{st.session_state.pred_mean:.1f} min", f"{st.session_state.pred_q95:.1f} min"],
+            textposition='auto' # Zeigt die Werte direkt im Balken an
+        )
+    ])
+
+    fig.update_layout(
+        yaxis_title='Predicted Delay in Minutes',
+        plot_bgcolor='rgba(0,0,0,0)', # Transparenter Hintergrund passt sich Streamlit an
+        margin=dict(l=0, r=0, t=30, b=0)
+    )
+
+    # Diagramm in Streamlit anzeigen
+    st.plotly_chart(fig, use_container_width=True)
+    # -------------------------------------------------
 
     # TICKET PRICE RESULTS
     price = st.session_state.ticket_price
     avg_delay = st.session_state.pred_mean
 
+    # worst-case helper
     if st.session_state.pred_q95 >= 120:
         worst_note = f"However, in the **worst case (95%)**, your delay could exceed 120 min, leading to a **50% refund ({price * 0.5:.2f} €)**."
     elif st.session_state.pred_q95 >= 60:
@@ -375,6 +337,7 @@ if st.session_state.pred_mean is not None:
     else:
         worst_note = "Even in the worst case, you are unlikely to reach the 60 min refund threshold."
     
+    # category and effective price
     if avg_delay < 60:
         st.session_state.eff_price = price
         st.session_state.category = "Delay < 60 min (0% refund)"
@@ -388,6 +351,7 @@ if st.session_state.pred_mean is not None:
         st.session_state.category = "Delay ≥ 120 min (50% refund)"
         st.session_state.reasoning = f"With an average prediction of **{avg_delay:.1f} min**, you are likely to get 50% back! {worst_note}"
 
+    # display results
     st.divider()
     st.subheader("Predicted Effective Price")
     st.title(f"{st.session_state.eff_price:.2f} €")
