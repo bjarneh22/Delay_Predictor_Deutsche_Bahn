@@ -29,39 +29,34 @@ After collecting the relevant data, it will be checked to ensure quality and cor
 Libraries that are required for this step are 
   1. requests
   2. pandas & datasets
-  3. sqlite3  
+  3. duckdb
       
 ### Data Storage and Handling
 
 **Storage**  
 Our project uses a hybrid storage approach, depending on the type of data:
-  1. Train data
-     - We use a SQLite database as the primary storage system.
-     - Allows structured storage of train, station, and delay data
-     - Supports efficient queries for filtering, sorting, joining, and aggregation
-     - Required package: sqlite3
-  
-  2. Debugging and processing logs
-     - Errors and system events will be captured in simple text or CSV log files.
-     - Required tools: open(), csv, datetime (for timestamps)
+   1. Train data
+      - We use a DuckDB database as the primary storage system.
+      - Allows structured storage of train, station, and delay data
+      - Supports efficient queries for filtering, sorting, joining, and aggregation
+      - Required package: duckdb
 
 **Handling**  
 To load, process, and analyze our data, we use several Python libraries:
-1. NumPy: Used for numerical operations.
-2. Pandas: Used for tabular data handling, transformations, and preparing data for visualizations.
-3. Lambda functions: Used for filtering and sorting operations.
+   1. NumPy: Used for numerical operations.
+   2. Pandas: Used for tabular data handling, transformations, and preparing data for visualizations.
+   3. Lambda functions: Used for filtering and sorting operations.
 
 This combination allows us to handle incoming API data, transform it, store it, and later analyse it for visualizations and reporting.
 
 ### Interface
 
 **Web app with streamlit**  
-We plan on building a web app with streamlit with the corresponding streamlit package.
+We build a web app with streamlit with the corresponding streamlit package.
 
 The app will integrate with the other libraries used throughout the project, including:
-- pandas for data manipulation and analysis
-- numpy for numerical operations
-- sqlite3 for database access
+- pandas for data manipulation, analysis and database access
+- joblib to load our models
 
 This approach ensures a seamless connection between our data storage, analysis, and user-facing interface.
 
@@ -86,47 +81,71 @@ Based on EDA results, features influencing the delay of a train will be construc
 Feature engineering will be supported by **pandas**, **numpy**, and model-preprocessing tools from **scikit-learn**.
 
 **Modeling and Evaluation**  
-The application uses machine learning models (e.g., Decision Tree, Random Forest, or Gradient Boosting) to predict expected delays or probabilities of surpassing a certain delay threshold.  
+The application uses Gradient Boosting to predict expected delays or probabilities of surpassing a certain delay threshold.  
 The model performance will be evaluated with appropriate statistical metrics, such as:  
-- Mean Absolute Error and Root Mean Squared Error  
-- Accuracy, Precision and Recall  
+- Mean Absolute Error
 - Cross-validation  
-These models will be implemented and tested with **scikit-learn** or **LightGBM**.
+These models will be implemented and tested with **scikit-learn**.
 
 **Application**  
-These models are then applied to data selected by users (specific train connections). Uncertainty measures, such as prediction intervals for point estimates or classification probabilities, can also be displayed in the web app. Users will be able to interactively choose between different models, access information about the modeling process, and download the results as a TXT file.
+These models are then applied to data selected by users (specific train connections). Uncertainty measures, such as prediction intervals for point estimates or classification probabilities, can also be displayed in the web app. Users will be able to access information about the model and download the results as a TXT file.
 
 ----
 ### Table for self-check
 
 | Category                     | Details                                                                           | Mark with ✔️ |
 |:-----------------------------|:----------------------------------------------------------------------------------|--------------|
-| 1. Source                    | High-quality dataset                                                              |     ...      |
-|                              | Quality control / cleaning                                                        |              |
-| 2. Data Storage and Handling | Management system                                                                 |              |
-|                              | No plaintext passwords                                                            |              |
-| 3. Interface                 | CLI, GUI or Web interface for users                                               |              |
-|                              | Extensive interface functions (account management, queries, analysis, help)       |              |
+| 1. Source                    | High-quality dataset                                                              |     ✔️      |
+|                              | Quality control / cleaning                                                        |     ✔️      |
+| 2. Data Storage and Handling | Management system                                                                 |     ✔️       |
+|                              | No plaintext passwords                                                            |     ✔️        |
+| 3. Interface                 | CLI, GUI or Web interface for users                                               |     ✔️       |
+|                              | Extensive interface functions (account management, queries, analysis, help)       |     ✔️        |
 | 4. Statistical Analysis      | Interactive statistics area                                                       |              |
-|                              | Basic statistics                                                                  |              |
-| Always mandatory             | Project proposal with incorporated feedback from tutor                            |              |
-|                              | GitHub repo with sensible commit messages, template README, contributions section |              |
-|                              | Frequent commenting                                                               |              |
-|                              | Docstrings for every function/class                                               |              |
-|                              | Testing of relevant functionalities to avoid crashing                             |              |
-|                              | Help page for system                                                              |              |
-|                              | Milestone presentation                                                            |              |
-|                              | AI-Usage Cards                                                                    |              |
+|                              | Basic statistics                                                                  |     ✔️        |
+| Always mandatory             | Project proposal with incorporated feedback from tutor                            |     ✔️       |
+|                              | GitHub repo with sensible commit messages, template README, contributions section |     ✔️       |
+|                              | Frequent commenting                                                               |     ✔️       |
+|                              | Docstrings for every function/class                                               |            |
+|                              | Testing of relevant functionalities to avoid crashing                             |            |
+|                              | Help page for system                                                              |            |
+|                              | Milestone presentation                                                            |     ✔️       |
+|                              | AI-Usage Cards                                                                    |            |
 
 ----
 ## How to Install
 
-tbd
+1. Clone the repository:
+   git clone https://github.com/bjarneh22/TBA_project.git
+   cd TBA_project
+
+2. Create a virtual environment:
+   python -m venv venv
+   source venv/bin/activate
+
+3. Install dependencies:
+   pip install -r requirements.txt
+
+4. Run the project:
+   streamlit run streamlit_app_dummy.py
 
 ----
 ## How to Use
 
-tbd
+1. Follow the instructions in the **Installation** section.
+
+2. Once the application opens in your browser, select your **departure station**.
+
+3. Choose one of the available **destination stations** from the dropdown menu.
+
+4. Enter the **ticket price** you paid for your journey.
+
+5. Click **"Calculate Prediction"**.
+
+6. The application will display the **expected delay**, including best-case and worst-case scenarios.
+
+7. Optionally, download a delay prediction report as a `.txt` file by clicking **"Download Report (TXT)"** under **Export Results**.
+
 
 ----
 ## Timeline
@@ -166,19 +185,23 @@ Contribution of each group member:
 ## Acknowlegdments
 
 ### Libraries
-- pandas
-- numpy
-- sqlite3
-- streamlit
 - requests
-- datasets
-- scipy
-- scikit-learn
+- numpy
 - matplotlib
+- pandas
+- streamlit
+- holidays
+- ipykernel
+- duckdb
+- scikit-learn
+- nbformat
+- seaborn
+- statsmodels
+- sklearn-quantile
 
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
-- tbd
+- https://piebro.github.io/deutsche-bahn-statistics
 
 ### References
 - tbd
