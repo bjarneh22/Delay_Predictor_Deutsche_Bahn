@@ -1,3 +1,23 @@
+'''
+This module downloads, cleans, and processes Deutsche Bahn train data 
+from the Hugging Face dataset, and stores it in a DuckDB database.
+
+Main steps performed in this script:
+
+1. Downloads parquet files from the Hugging Face dataset if not already present locally.
+2. Filters the data for train types ICE, IC, and EC.
+3. Creates a temporary DuckDB table with cleaned and typed columns.
+4. Adds an event_time column for ordering events.
+5. Flags start and end of rides based on planned arrival and departure times.
+6. Creates lag-based views to identify new rides and assigns preliminary ride IDs.
+7. Validates rides to keep only complete rides (with exactly one start and one end flag).
+8. Renumbers rides consecutively and stores the final ride information in a DuckDB table 'train_delay'.
+
+This module does not define functions or classes.
+
+Author: Eduard Unruh (Student ID: 20170814)
+'''
+
 from pathlib import Path
 import os
 import requests
