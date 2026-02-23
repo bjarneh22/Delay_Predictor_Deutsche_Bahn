@@ -101,16 +101,16 @@ These models are then applied to data selected by users (specific train connecti
 |                              | No plaintext passwords                                                            |     ✔️        |
 | 3. Interface                 | CLI, GUI or Web interface for users                                               |     ✔️       |
 |                              | Extensive interface functions (account management, queries, analysis, help)       |     ✔️        |
-| 4. Statistical Analysis      | Interactive statistics area                                                       |              |
+| 4. Statistical Analysis      | Interactive statistics area                                                       |     ✔️       |
 |                              | Basic statistics                                                                  |     ✔️        |
 | Always mandatory             | Project proposal with incorporated feedback from tutor                            |     ✔️       |
 |                              | GitHub repo with sensible commit messages, template README, contributions section |     ✔️       |
 |                              | Frequent commenting                                                               |     ✔️       |
 |                              | Docstrings for every function/class                                               |      ✔️      |
-|                              | Testing of relevant functionalities to avoid crashing                             |            |
+|                              | Testing of relevant functionalities to avoid crashing                             |      ✔️    |
 |                              | Help page for system                                                              |      ✔️      |
 |                              | Milestone presentation                                                            |     ✔️       |
-|                              | AI-Usage Cards                                                                    |            |
+|                              | AI-Usage Cards                                                                    |     ✔️     |
 
 ----
 ## How to Install
@@ -207,7 +207,3 @@ datetime
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
 - https://piebro.github.io/deutsche-bahn-statistics
-
-### References
-- tbd
-- tbd
