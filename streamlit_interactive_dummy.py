@@ -4,7 +4,7 @@
 
 # libraries
 import streamlit as st 
-import streamlit.components.v1 as components # NEU: Für Chart.js HTML Einbindung
+import streamlit.components.v1 as components
 import pandas as pd 
 from pathlib import Path
 import time 
@@ -146,17 +146,17 @@ with st.sidebar:
     show_help = st.checkbox("Show Help / Instructions")
     if show_help:
         st.markdown("""
-### How to Use 🚆
+                    ### How to Use 🚆
 
-1. **Select your departure station** from the dropdown menu.
-2. **Choose one of the available destination stations**.
-3. **Pick a train connection** from the list of available options.
-4. **Enter the ticket price** you paid for your journey.
-5. Click **"Calculate Prediction!"**.
-6. View the **predicted delay**, including best-case and worst-case scenarios, as well as the **predicted effective price**.
-7. Optionally, download a **delay prediction report** as a `.txt` file by clicking **"Download Report (TXT)"** under **Export Results**.
+                    1. **Select your departure station** from the dropdown menu.
+                    2. **Choose one of the available destination stations**.
+                    3. **Pick a train connection** from the list of available options.
+                    4. **Enter the ticket price** you paid for your journey.
+                    5. Click **"Calculate Prediction!"**.
+                    6. View the **predicted delay**, including best-case and worst-case scenarios, as well as the **predicted effective price**.
+                    7. Optionally, download a **delay prediction report** as a `.txt` file by clicking **"Download Report (TXT)"** under **Export Results**.
 
-""")
+                    """)
 
         st.info("💡 Tip: Enable Mock Mode below for testing without connecting to the API.")
         st.warning("""
@@ -168,7 +168,35 @@ with st.sidebar:
 
     # mock mode toggle
     st.subheader("Testing / Mock Mode")
-    st.session_state.mock_mode = st.checkbox("Enable Mock Mode (Testing)", value=False)
+
+    # Initialize previous value once
+    if "mock_mode_previous" not in st.session_state:
+        st.session_state.mock_mode_previous = False
+
+    # Checkbox
+    mock_mode = st.checkbox(
+        "Enable Mock Mode (Testing)",
+        value=st.session_state.get("mock_mode", False)
+    )
+
+    # Detect change
+    if mock_mode != st.session_state.mock_mode_previous:
+
+        # Save new value first
+        st.session_state.mock_mode = mock_mode
+
+        # Reset dynamic state
+        for key, value in defaults.items():
+            st.session_state[key] = value
+
+        # Update tracker
+        st.session_state.mock_mode_previous = mock_mode
+
+        st.rerun()
+
+    # Keep state in sync
+    st.session_state.mock_mode = mock_mode
+
     if st.session_state.mock_mode:
         st.info("Mock Mode active: Using dummy data instead of API.")
 
@@ -199,21 +227,102 @@ if start_station != st.session_state.start_station:
 ### 2 LOAD DATA IF START_STATION SELECTED
 if st.session_state.start_station and st.session_state.df_destinations is None:
 
-    with st.spinner("Searching for possible connections..."):
+    with st.spinner(f"Searching for connections from {st.session_state.start_station}..."):
+
+        # mock mode
         if st.session_state.mock_mode:
-            final_df = pd.read_csv(BASE_DIR / "data" / "mock_api_data.csv")
-            time.sleep(1.5)
+            try:
+                final_df = pd.read_csv(BASE_DIR / "data" / "mock_api_data.csv")
+
+                # filter only for valid rides
+                valid_rides = final_df[
+                    (final_df["station_current"] == st.session_state.start_station) & 
+                    (final_df["station_dest"] != st.session_state.start_station)
+                ]["ride_id"].unique()
+
+                final_df = final_df[
+                    final_df["ride_id"].isin(valid_rides)
+                ]
+
+                time.sleep(1.2)  # simulate API delay
+            except Exception as e:
+                st.error(f"Error loading mock data: {e}")
+                st.stop()
+            
+
+        # api mode
         else:
             fetcher = Fetcher()
-            df_departures, err = fetcher.stations_details(st.session_state.start_station)
-            df_trip = fetcher.trip_details()
-            final_df = fetcher.create_dataframe()
 
-        df_filtered = final_df[final_df["train_type"].isin(["ICE", "IC"])]
-        df_destinations = get_possible_destinations(df_filtered, st.session_state.start_station)
+            # Get station ID
+            s_id = fetcher.get_station_id(st.session_state.start_station)
 
+            if not s_id:
+                st.error(f"Station '{st.session_state.start_station}' not recognized.")
+                st.stop()
+
+            try:
+                departures = fetcher.stations_details(s_id)
+            except Exception as e:
+                st.error(f"Error retrieving departures: {e}")
+                st.stop()
+
+            if not departures:
+                st.warning(
+                    f"No departures currently found for '{st.session_state.start_station}'."
+                )
+                st.stop()
+
+            # initialise list for trips
+            all_trips = []
+            valid_deps = [d for d in departures if d.get("tripId")]
+            num_deps = min(len(valid_deps), 5)  # API protection
+
+            progress_bar = st.progress(0)
+
+            for i in range(num_deps):
+                dep = valid_deps[i]
+                trip_id = dep.get("tripId")
+
+                if isinstance(trip_id, str):
+                    trip_data = fetcher.trip_details(trip_id)
+
+                    if trip_data is not None:
+                        df_trip = fetcher.create_dataframe(trip_data, ride_id=i)
+                        if not df_trip.empty:
+                            all_trips.append(df_trip)
+
+                time.sleep(0.3)  # API rate safety
+                progress_bar.progress((i + 1) / num_deps)
+
+            if not all_trips:
+                st.error("No valid trip data available.")
+                st.stop()
+
+            final_df = pd.concat(all_trips, ignore_index=True)
+
+        # shared post processing
+
+        df_filtered = final_df[
+            final_df["train_type"].isin(["ICE", "IC"])
+        ]
+
+        if df_filtered.empty:
+            st.warning("No ICE/IC connections found in this timeframe.")
+            st.stop()
+
+        df_destinations = get_possible_destinations(
+            df_filtered,
+            st.session_state.start_station
+        )
+
+        # Save to session state
         st.session_state.df_filtered = df_filtered
         st.session_state.df_destinations = df_destinations
+        
+        st.success(
+            f"Connections successfully loaded ({len(st.session_state.df_filtered['ride_id'].unique())} trains)."
+        )
 
 
 ### 3 SELECT DESTINATION + GET CONNECTIONS 
@@ -223,7 +332,10 @@ if st.session_state.start_station:
         pass  # still loading
 
     elif len(st.session_state.df_destinations) == 0:
-        st.info("Sadly there is no possible destination for you to go to. Please select a different start station.")
+        st.info(
+            f"No valid ICE/IC destinations found for '{st.session_state.start_station}'. "
+            "Please select a different start station."
+        )
 
     else:
         
@@ -245,7 +357,9 @@ if st.session_state.start_station:
             if not end_station:
                 st.warning("Please select a destination station.")
             else: 
-                df_connections = get_connections(st.session_state.df_filtered, st.session_state.start_station, end_station)
+                df_connections = get_connections(st.session_state.df_filtered, 
+                                                 st.session_state.start_station, 
+                                                 end_station)
                 
                 if df_connections.empty:
                     st.warning("No connections found.")
@@ -333,74 +447,84 @@ if st.session_state.run_prediction and st.session_state.df_final is not None:
 if st.session_state.pred_mean is not None:
 
     st.divider()
-    st.subheader("Prediction")
+    st.subheader("Results & Route Analysis")
 
-    # Metrics Layout
+    # display predictions in metrics
     col1, col2, col3 = st.columns(3)
     col1.metric("Ø Expected", f"{st.session_state.pred_mean:.1f} min")
     col2.metric("Best Case (5%)", f"{st.session_state.pred_q05:.1f} min")
     col3.metric("Worst Case (95%)", f"{st.session_state.pred_q95:.1f} min", delta_color="inverse")
 
-    # --- REINES PYTHON INTERAKTIVES CHART (PLOTLY) ---
-    fig = go.Figure(data=[
-        go.Bar(
-            x=['Best Case (5%)', 'Ø Expected', 'Worst Case (95%)'],
-            y=[st.session_state.pred_q05, st.session_state.pred_mean, st.session_state.pred_q95],
-            marker_color=['#4BC0C0', '#FFCE56', '#FF6384'], # Grün, Gelb, Rot
-            text=[f"{st.session_state.pred_q05:.1f} min", f"{st.session_state.pred_mean:.1f} min", f"{st.session_state.pred_q95:.1f} min"],
-            textposition='auto' # Zeigt die Werte direkt im Balken an
-        )
-    ])
-
-    fig.update_layout(
-        yaxis_title='Predicted Delay in Minutes',
-        plot_bgcolor='rgba(0,0,0,0)', # Transparenter Hintergrund passt sich Streamlit an
-        margin=dict(l=0, r=0, t=30, b=0)
-    )
-
-    # Diagramm in Streamlit anzeigen
-    st.plotly_chart(fig, use_container_width=True)
-    # -------------------------------------------------
-
-    # TICKET PRICE RESULTS
-    price = st.session_state.ticket_price
     avg_delay = st.session_state.pred_mean
-
-    # worst-case helper
-    if st.session_state.pred_q95 >= 120:
-        worst_note = f"However, in the **worst case (95%)**, your delay could exceed 120 min, leading to a **50% refund ({price * 0.5:.2f} €)**."
-    elif st.session_state.pred_q95 >= 60:
-        worst_note = f"However, in the **worst case (95%)**, you could reach the 60 min threshold, resulting in a **25% refund ({price * 0.75:.2f} €)**."
-    else:
-        worst_note = "Even in the worst case, you are unlikely to reach the 60 min refund threshold."
+    price = st.session_state.ticket_price
     
-    # category and effective price
-    if avg_delay < 60:
-        st.session_state.eff_price = price
-        st.session_state.category = "Delay < 60 min (0% refund)"
-        st.session_state.reasoning = f"Since your predicted average is **{avg_delay:.1f} min**, you will likely pay the full price. {worst_note}"
-    elif 60 <= avg_delay < 120:
-        st.session_state.eff_price = price * 0.75
-        st.session_state.category = "Delay 60-119 min (25% refund)"
-        st.session_state.reasoning = f"Since your predicted average is **{avg_delay:.1f} min**, you fall into the 25% refund category. {worst_note}"
+    # define the refund info based on the average delay 
+    if avg_delay >= 120:
+        refund_factor, category = 0.5, "Delay ≥ 120 min (50% refund)"
+        reasoning = f"With **{avg_delay:.1f} min** average delay, you'll likely get **50%** back."
+    elif avg_delay >= 60:
+        refund_factor, category = 0.25, "Delay ≥ 60 min (25% refund)"
+        reasoning = f"With **{avg_delay:.1f} min** average delay, you'll likely get **25%** back."
     else:
-        st.session_state.eff_price = price * 0.5
-        st.session_state.category = "Delay ≥ 120 min (50% refund)"
-        st.session_state.reasoning = f"With an average prediction of **{avg_delay:.1f} min**, you are likely to get 50% back! {worst_note}"
+        refund_factor, category = 0.0, "No refund expected (< 60 min)"
+        reasoning = "The predicted delay is below the 60-minute threshold for refunds."
 
-    # display results
-    st.divider()
-    st.subheader("Predicted Effective Price")
-    st.title(f"{st.session_state.eff_price:.2f} €")
-    st.info(st.session_state.reasoning)
+    # calculate effective price after refund
+    eff_price = price * (1 - refund_factor)
+    st.session_state.eff_price = eff_price
+    st.session_state.category = category
+
+    # create an informative box with interactive chart 
+    with st.container(border=True):
+        st.markdown(f"### Route Progression: {st.session_state.train_selected}")
+        
+        c1, c2 = st.columns([1, 2])
+        
+        with c1:
+            st.write("Predicted Effective Price:")
+            st.title(f"{eff_price:.2f} €")
+            st.info(reasoning)
+
+        with c2:
+            df_plot = st.session_state.df_selected.copy()
+            
+            # create line-chart
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatter(
+                x=df_plot["station_current"],
+                y=df_plot["current_delay"],
+                mode='lines+markers',
+                name='Current Delay',
+                line=dict(color='RoyalBlue', width=3),
+                marker=dict(size=8),
+                hovertemplate="<b>%{x}</b><br>Delay: %{y} min<extra></extra>"
+            ))
+
+            # lines for refund thresholds 
+            fig.add_hline(y=60, line_dash="dash", line_color="orange", annotation_text="60 min Threshold")
+            fig.add_hline(y=120, line_dash="dash", line_color="red", annotation_text="120 min Threshold")
+
+            fig.update_layout(
+                height=300,
+                margin=dict(l=10, r=10, t=30, b=10),
+                xaxis_title="Stations",
+                yaxis_title="Delay (minutes)",
+                hovermode="x unified",
+                xaxis=dict(tickangle=-45)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
 
 
 ### 8 EXPORT THE RESULTS
 if st.session_state.pred_mean is not None:
 
+    # layout
     st.divider()
-    st.subheader("💾 Export Results")
+    st.subheader("Export Results")
 
+    # text for export
     export_text = f"""BAHN DELAY PREDICTION REPORT
 --------------------------------
 Connection: {st.session_state.start_station} -> {st.session_state.end_station}
@@ -412,16 +536,12 @@ PREDICTION RESULTS:
 - Best Case (5% Quantile): {st.session_state.pred_q05:.1f} min
 - Worst Case (95% Quantile): {st.session_state.pred_q95:.1f} min
 
-PRICE ANALYSIS:
-- Predicted Effective Price: {st.session_state.eff_price:.2f}€
-- Refund Category: {st.session_state.category}
-- Summary: {st.session_state.reasoning.replace('**', '')}
-
 MODEL CONFIGURATION:
 {st.session_state.get('model_info_text', 'No model info available.')}
 
 Generated on: {time.strftime("%Y-%m-%d %H:%M:%S")}"""
 
+    # download button
     st.download_button(
         label="Download Report (TXT)",
         data=export_text,
