@@ -185,19 +185,24 @@ Contribution of each group member:
 ## Acknowlegdments
 
 ### Libraries
-- requests
-- numpy
-- matplotlib
-- pandas
-- streamlit
-- holidays
-- ipykernel
-- duckdb
-- scikit-learn
-- nbformat
-- seaborn
-- statsmodels
-- sklearn-quantile
+requests
+numpy
+matplotlib
+pandas
+streamlit
+holidays
+ipykernel
+duckdb
+scikit-learn
+nbformat
+seaborn
+statsmodels
+sklearn-quantile
+plotly
+joblib 
+urllib
+typing
+datetime
 
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
