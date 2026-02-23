@@ -106,9 +106,9 @@ These models are then applied to data selected by users (specific train connecti
 | Always mandatory             | Project proposal with incorporated feedback from tutor                            |     ✔️       |
 |                              | GitHub repo with sensible commit messages, template README, contributions section |     ✔️       |
 |                              | Frequent commenting                                                               |     ✔️       |
-|                              | Docstrings for every function/class                                               |            |
+|                              | Docstrings for every function/class                                               |      ✔️      |
 |                              | Testing of relevant functionalities to avoid crashing                             |            |
-|                              | Help page for system                                                              |            |
+|                              | Help page for system                                                              |      ✔️      |
 |                              | Milestone presentation                                                            |     ✔️       |
 |                              | AI-Usage Cards                                                                    |            |
 
@@ -185,19 +185,24 @@ Contribution of each group member:
 ## Acknowlegdments
 
 ### Libraries
-- requests
-- numpy
-- matplotlib
-- pandas
-- streamlit
-- holidays
-- ipykernel
-- duckdb
-- scikit-learn
-- nbformat
-- seaborn
-- statsmodels
-- sklearn-quantile
+requests
+numpy
+matplotlib
+pandas
+streamlit
+holidays
+ipykernel
+duckdb
+scikit-learn
+nbformat
+seaborn
+statsmodels
+sklearn-quantile
+plotly
+joblib 
+urllib
+typing
+datetime
 
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
