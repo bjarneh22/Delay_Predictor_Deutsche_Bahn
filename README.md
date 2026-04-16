@@ -1,4 +1,4 @@
-# DL4Y C4$H
+# Delay Predictor - Deutsche Bahn
 
 An application that predicts future delays of train connections in Germany. Based on these predictions, the application provides an overview of adjusted prices for the connections, calculated according to the refund rules of the DB (Deutsche Bahn - German Railway).
 
@@ -165,7 +165,7 @@ Group information:
 - Group code: G08
 - Group repository: https://github.com/bjarneh22/TBA_project
 - Tutor responsible: Constantin Dallinghaus 
-- Group team leader: Jakob Erhard (jakob.erhard01@stud.uni-goettingen.de)
+- Group team leader: Jakob Erhard
 - Group members: Jakob Erhard, Bjarne Herbst, Eduard Unruh
 
 Contribution of each group member:
