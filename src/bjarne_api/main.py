@@ -1,5 +1,5 @@
-# import the functions from collector.py
-from src.bjarne_api.collector import get_station_details, get_journeys, get_weather
+# import the functions and classes from collector.py
+from src.bjarne_api.collector import get_station_details, get_weather, Fetcher
 
 # import the functions for data insertion(DI)
 import sqlite3
@@ -66,34 +66,33 @@ if end_details:
         add_weather(conn, (end_id, end_weather['temperature'],
                            end_weather['precipitation'], end_weather['wind_speed'], now))
 
-    # get the trains and store them 
+    # get the trains and store them
     print(f"Züge nach {end}:")
-    df = get_journeys(start_id, end_id)
+    fetcher = Fetcher()
+    df, error = fetcher.find_connection(start, end)
 
-
-
-    # If our Data Frame is not empty, show the user a peek of it 
+    # If our Data Frame is not empty, show the user a peek of it
     if not df.empty:
         print(f"\n Aktuelle Verbindungen von {start} nach {end}")
-        print(df[["train_line", "departure_time", "planned_arrival_time", "actual_arrival_time", "current_delay"]].head(20))
+        print(df[["train_name", "train_type", "departure_planned", "current_delay"]].head(20))
 
     # DI: add all the journeys into the table
-    for _, row in df.iterrows():
-        journey_tuple = (
-            row["train_line"],
-            start_id,
-            end_id,
-            row["departure_time"].isoformat(),
-            row["planned_arrival_time"].isoformat() if row["planned_arrival_time"] else None,
-            row["actual_arrival_time"].isoformat() if row["actual_arrival_time"] else None,
-            row["current_delay"],
-            now
-        )
-        add_journeys(conn, journey_tuple)
+        for _, row in df.iterrows():
+            journey_tuple = (
+                row["train_name"],
+                start_id,
+                end_id,
+                row["departure_planned"],
+                row["arrival_planned"] if row["arrival_planned"] else None,
+                row["arrival_real"] if row["arrival_real"] else None,
+                row["current_delay"],
+                now
+            )
+            add_journeys(conn, journey_tuple)
 
     # If there is no trip in our Data Frame
-    else: 
-        print(f"Aktuell keine Verbindungen von {start} nach {end}")
+    else:
+        print(f"Aktuell keine Verbindungen von {start} nach {end}: {error}")
 
 # If we don't have station detais 
 else:
