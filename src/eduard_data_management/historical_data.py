@@ -15,7 +15,7 @@ Main steps performed in this script:
 
 This module does not define functions or classes.
 
-Author: Eduard Unruh (Student ID: 20170814)
+Author: Eduard Unruh
 '''
 
 from pathlib import Path
