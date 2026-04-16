@@ -1,7 +1,5 @@
 # DL4Y C4$H
 
-<img src="DC_Logo.png" alt="logo" width="200"/>
-
 An application that predicts future delays of train connections in Germany. Based on these predictions, the application provides an overview of adjusted prices for the connections, calculated according to the refund rules of the DB (Deutsche Bahn - German Railway).
 
 ----
