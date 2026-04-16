@@ -25,11 +25,11 @@ except ImportError:
     
 # import fetcher class (Bjarne)
 try: 
-    from src.bjarne_api.collector_new import Fetcher
+    from src.bjarne_api.collector import Fetcher
 except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
     try:
-        from src.bjarne_api.collector_new import Fetcher
+        from src.bjarne_api.collector import Fetcher
     except ImportError as e:
         st.error(f"Import Fehler: {e}")
         st.stop()
