@@ -6,12 +6,10 @@
 import streamlit as st 
 import streamlit.components.v1 as components # NEU: Für Chart.js HTML Einbindung
 import pandas as pd 
-from pathlib import Path
+import pathlib as Path
 import time 
 import sys 
-import os 
-import joblib
-import plotly.graph_objects as go
+import os
 
 # import custom functions (Jakob)
 try:
