@@ -14,7 +14,7 @@ Fetcher class:
 - create_dataframe: DataFrame mit relevanten Features aus Reisedaten erstellen
 - find_connection: Mögliche Verbindungen zwischen zwei Stationen finden
 
-Author: Bjarne Herbst (Student ID: 25268915)
+Author: Bjarne Herbst
 '''
 
 import requests
