@@ -114,18 +114,19 @@ These models are then applied to data selected by users (specific train connecti
 ## How to Install
 
 1. Clone the repository:
-   git clone https://github.com/bjarneh22/TBA_project.git
-   cd TBA_project
+   git clone https://github.com/bjarneh22/Delay_Predictor_Deutsche_Bahn.git
+   
+   cd Delay_Predictor_Deutsche_Bahn
 
-2. Create a virtual environment:
+3. Create a virtual environment:
    python -m venv venv
    source venv/bin/activate
 
-3. Install dependencies:
+4. Install dependencies:
    pip install -r requirements.txt
 
-4. Run the project:
-   streamlit run streamlit_app_dummy.py
+5. Run the project:
+   streamlit run streamlit_app.py
 
 ----
 ## How to Use
@@ -163,7 +164,7 @@ These models are then applied to data selected by users (specific train connecti
 Group information:
 - Group name: TBA 
 - Group code: G08
-- Group repository: https://github.com/bjarneh22/TBA_project
+- Group repository: https://github.com/bjarneh22/Delay_Predictor_Deutsche_Bahn
 - Tutor responsible: Tutor 
 - Group team leader: Member 1
 - Group members: Member 1, Member 2, Member 3
@@ -183,24 +184,24 @@ Contribution of each group member:
 ## Acknowlegdments
 
 ### Libraries
-requests
-numpy
-matplotlib
-pandas
-streamlit
-holidays
-ipykernel
-duckdb
-scikit-learn
-nbformat
-seaborn
-statsmodels
-sklearn-quantile
-plotly
-joblib 
-urllib
-typing
-datetime
+- requests
+- numpy
+- matplotlib
+- pandas
+- streamlit
+- holidays
+- ipykernel
+- duckdb
+- scikit-learn
+- nbformat
+- seaborn
+- statsmodels
+- sklearn-quantile
+- plotly
+- joblib 
+- urllib
+- typing
+- datetime
 
 ### Inspirations and Similar Projects
 - https://bahnvorhersage.de/
