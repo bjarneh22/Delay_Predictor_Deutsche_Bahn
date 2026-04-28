@@ -88,7 +88,7 @@ These models will be implemented and tested with **scikit-learn**.
 **Application**  
 These models are then applied to data selected by users (specific train connections). Uncertainty measures, such as prediction intervals for point estimates or classification probabilities, can also be displayed in the web app. Users will be able to access information about the model and download the results as a TXT file.
 
-**Remark**
+**Remark:**
 Our delay prediction tends to differ significantly from the "real" delay as received by the API.
 
 ----
