@@ -14,7 +14,6 @@ env/
 # Datensätze begrenzen
 data/*.json
 data/*.duckdb
-data/train_delay_with_features.parquet
 data/parquet/
 !data/.gitkeep  # Aber die .gitkeep Datei behalten wir!
 
