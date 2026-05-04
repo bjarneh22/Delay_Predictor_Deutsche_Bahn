@@ -14,7 +14,6 @@ Fetcher class:
 - create_dataframe: DataFrame mit relevanten Features aus Reisedaten erstellen
 - find_connection: Mögliche Verbindungen zwischen zwei Stationen finden
 
-Author: Member 2
 '''
 
 import requests

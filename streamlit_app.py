@@ -1,30 +1,25 @@
-### !!! CHECK IF REQUIREMENTS.TXT LOADED 
-
 ### IMPORTS ###
 
-# libraries
-import streamlit as st 
-import streamlit.components.v1 as components # NEU: Für Chart.js HTML Einbindung
-import pandas as pd 
-import pathlib as Path
-import time 
-import sys 
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from pathlib import Path
+import time
+import sys
 import os
+import joblib
 
-# import custom functions (Jakob)
 try:
-    from src.jakob_analysis.functions import * 
-    
-except ImportError: 
+    from src.jakob_analysis.functions import *
+except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
     try:
-        from src.jakob_analysis.functions import * 
+        from src.jakob_analysis.functions import *
     except ImportError as e:
         st.error(f"Fehler beim Import: {e}")
         st.stop()
-    
-# import fetcher class (Bjarne)
-try: 
+
+try:
     from src.bjarne_api.collector import Fetcher
 except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -131,13 +126,55 @@ for key, value in defaults.items():
 
 ### UI START ###
 
-st.set_page_config(page_title="Bahn Delay Predictor", page_icon="🚆")
-st.title("🚆 Bahn Delay Predictor")
+st.set_page_config(page_title="Delay Predictor - Deutsche Bahn", page_icon="🚆")
+st.title("🚆 Delay Predictor - Deutsche Bahn")
 
-# 0 MOCK VERSION SELECTER
+### SIDEBAR ###
+
 with st.sidebar:
-    st.header("Settings")
-    st.session_state.mock_mode = st.toggle("Enable Mock Mode (Testing)", value=False)
+    st.header("Delay Predictor Settings")
+
+    show_help = st.checkbox("Show Help / Instructions")
+    if show_help:
+        st.markdown("""
+### How to Use
+
+1. **Select your departure station** from the dropdown menu.
+2. **Choose one of the available destination stations**.
+3. **Pick a train connection** from the list of available options.
+4. **Enter the ticket price** you paid for your journey.
+5. Click **"Calculate Prediction!"**.
+6. View the **predicted delay**, including best-case and worst-case scenarios, as well as the **predicted effective price**.
+7. Optionally, download a **delay prediction report** as a `.txt` file by clicking **"Download Report (TXT)"** under **Export Results**.
+""")
+        st.info("💡 Tip: Enable Mock Mode below for testing without connecting to the API.")
+        st.warning("""
+- If no destinations appear, the app will show the message *"Sadly there is no possible destination for you to go to. Please select a different start station."*.
+- Make sure all required data files are available in the `data/` folder.
+- Our delay prediction tends to differ significantly from the "real" delay as received by the API.
+""")
+
+    st.markdown("---")
+
+    st.subheader("Testing / Mock Mode")
+
+    if "mock_mode_previous" not in st.session_state:
+        st.session_state.mock_mode_previous = False
+
+    mock_mode = st.checkbox(
+        "Enable Mock Mode (Testing)",
+        value=st.session_state.get("mock_mode", False)
+    )
+
+    if mock_mode != st.session_state.mock_mode_previous:
+        st.session_state.mock_mode = mock_mode
+        for key, value in defaults.items():
+            st.session_state[key] = value
+        st.session_state.mock_mode_previous = mock_mode
+        st.rerun()
+
+    st.session_state.mock_mode = mock_mode
+
     if st.session_state.mock_mode:
         st.info("Mock Mode active: Using dummy data instead of API.")
 
